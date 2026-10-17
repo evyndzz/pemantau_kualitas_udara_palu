@@ -78,7 +78,7 @@ export const AQIHeroCard: React.FC<AQIHeroCardProps> = ({ data, ispuInfo, isDark
           </span>
         </div>
 
-        {/* Standard Switcher Pill (US AQI vs ISPU KLHK) */}
+        {/* Standard Switcher Pill (AccuWeather AQI vs ISPU KLHK) */}
         <div className="mt-1.5 inline-flex items-center rounded-full bg-slate-100/90 dark:bg-slate-800/90 p-0.5 text-[10px] font-bold">
           <button
             type="button"
@@ -89,7 +89,7 @@ export const AQIHeroCard: React.FC<AQIHeroCardProps> = ({ data, ispuInfo, isDark
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
-            Indeks AQI
+            AccuWeather AQI
           </button>
           <button
             type="button"
@@ -166,7 +166,7 @@ export const AQIHeroCard: React.FC<AQIHeroCardProps> = ({ data, ispuInfo, isDark
             textAnchor="middle"
             className="fill-slate-500 dark:fill-slate-400 text-[11px] font-bold uppercase tracking-wider"
           >
-            {standard === 'aqi' ? 'INDEKS AQI' : 'INDEKS ISPU'}
+            {standard === 'aqi' ? 'ACCUWEATHER AQI' : 'INDEKS ISPU'}
           </text>
         </svg>
 
@@ -175,17 +175,21 @@ export const AQIHeroCard: React.FC<AQIHeroCardProps> = ({ data, ispuInfo, isDark
           className={`-mt-7 inline-flex items-center gap-1.5 rounded-full px-3.5 py-0.5 text-[11px] font-bold shadow-2xs ${ispuInfo.pillClass}`}
         >
           <StatusShieldBadgeIcon color={ispuInfo.colorHex} className="h-3.5 w-3.5" />
-          <span>Kategori: {ispuInfo.category}</span>
+          <span>Kategori: {data.current.accuweatherCategory || ispuInfo.category}</span>
         </div>
       </div>
 
-      {/* Bottom Micro Summary with Official BMKG Weather */}
+      {/* Bottom Micro Summary with Official AccuWeather Weather */}
       <div className="relative z-10 mt-2 flex w-full items-center justify-between border-t border-slate-200/60 dark:border-slate-800 pt-2 text-[11px] text-slate-500 dark:text-slate-400 gap-2">
         <span className="truncate">
-          BMKG: <strong className="text-slate-800 dark:text-slate-200">{data.weather.weatherDesc} • {data.weather.temperature}°C</strong>
+          Cuaca: <strong className="text-slate-800 dark:text-slate-200">{data.weather.weatherDesc} • {data.weather.temperature}°C</strong>
         </span>
         <span className="shrink-0">
-          PM2.5: <strong className="text-slate-800 dark:text-slate-200">{data.current.pm2_5.toFixed(2)} µg/m³</strong>
+          PM2.5:{' '}
+          <strong className="text-slate-800 dark:text-slate-200">
+            {data.current.pm2_5.toFixed(0)} µg/m³
+            {data.current.pm2_5_aqi ? ` (${data.current.pm2_5_aqi} AQI)` : ''}
+          </strong>
         </span>
       </div>
     </div>

@@ -7,19 +7,41 @@ export interface CityLocation {
   lng: number;
   description: string;
   bmkgAdm4?: string;
+  accuweatherKey?: string;
+  accuweatherSlug?: string;
   isProvincialCapital?: boolean;
+}
+
+export interface PollutantSubIndex {
+  aqi: number;
+  category: string; // e.g., 'Bagus Sekali', 'Lumayan', 'Buruk', 'Tidak Sehat', 'Sangat Tidak Sehat', 'Berbahaya'
+  concentration: number;
 }
 
 export interface CurrentPollutants {
   time: string;
-  us_aqi: number;
+  us_aqi: number; // AccuWeather AQI (Plume Scale)
   european_aqi: number;
+  accuweatherCategory?: string; // e.g., 'Tidak Sehat', 'Buruk', 'Lumayan', 'Bagus Sekali'
+  accuweatherSummary?: string;
   pm2_5: number;
+  pm2_5_aqi?: number;
+  pm2_5_category?: string;
   pm10: number;
+  pm10_aqi?: number;
+  pm10_category?: string;
   carbon_monoxide: number; // CO (µg/m³)
+  co_aqi?: number;
+  co_category?: string;
   nitrogen_dioxide: number; // NO2 (µg/m³)
+  no2_aqi?: number;
+  no2_category?: string;
   sulphur_dioxide: number; // SO2 (µg/m³)
+  so2_aqi?: number;
+  so2_category?: string;
   ozone: number; // O3 (µg/m³)
+  o3_aqi?: number;
+  o3_category?: string;
   dust: number;
   aerosol_optical_depth: number;
   uv_index: number;
@@ -42,6 +64,7 @@ export interface CurrentWeather {
   time: string;
   temperature: number;
   apparentTemperature: number;
+  realFeelLabel?: string; // e.g., 'Sangat Hangat', 'Panas'
   humidity: number;
   windSpeed: number;
   windDirection: number;
@@ -51,7 +74,11 @@ export interface CurrentWeather {
   weatherDesc: string;
   weatherIconUrl?: string;
   cloudCover?: number;
+  visibilityKm?: number;
+  dewPoint?: number;
   surfacePressure: number;
+  accuweatherUrl?: string;
+  accuweatherLocationKey?: string;
   bmkgAdm4?: string;
   bmkgStationName?: string;
   bmkgAnalysisDate?: string;

@@ -8,40 +8,52 @@ interface PollutantGridProps {
 }
 
 export const PollutantGrid: React.FC<PollutantGridProps> = ({ pollutants }) => {
+  const pm25Aqi = pollutants.pm2_5_aqi ?? getPollutantPercentage('pm2_5', pollutants.pm2_5);
+  const pm10Aqi = pollutants.pm10_aqi ?? getPollutantPercentage('pm10', pollutants.pm10);
+  const o3Aqi = pollutants.o3_aqi ?? getPollutantPercentage('o3', pollutants.ozone);
+  const no2Aqi = pollutants.no2_aqi ?? getPollutantPercentage('no2', pollutants.nitrogen_dioxide);
+  const coAqi = pollutants.co_aqi ?? getPollutantPercentage('co', pollutants.carbon_monoxide);
+
   const items = [
     {
       key: 'PM2.5',
       title: 'Partikel Halus Asap (PM2.5)',
-      value: pollutants.pm2_5.toFixed(2),
+      value: pollutants.pm2_5.toFixed(0),
       unit: 'µg/m³',
-      pct: getPollutantPercentage('pm2_5', pollutants.pm2_5),
-      limit: 'Batas Aman KLHK: 15.5 µg/m³',
+      aqiTag: `${pm25Aqi} AQI`,
+      category: pollutants.pm2_5_category || (pm25Aqi > 100 ? 'Tidak Sehat' : 'Lumayan'),
+      limit: 'Batas WHO: 15 µg/m³',
       desc: 'Partikel mikroskopis kabut asap karhutla yang dapat menembus paru-paru hingga aliran darah.',
       icon: <CloudFog className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />,
       badgeClass:
-        pollutants.pm2_5 <= 15.5
+        pm25Aqi <= 49
           ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
-          : pollutants.pm2_5 <= 55.4
+          : pm25Aqi <= 99
             ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
             : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800',
     },
     {
       key: 'PM10',
       title: 'Partikel Debu & Abu (PM10)',
-      value: pollutants.pm10.toFixed(2),
+      value: pollutants.pm10.toFixed(0),
       unit: 'µg/m³',
-      pct: getPollutantPercentage('pm10', pollutants.pm10),
-      limit: 'Batas Aman ISPU: 50 µg/m³',
+      aqiTag: `${pm10Aqi} AQI`,
+      category: pollutants.pm10_category || (pm10Aqi > 70 ? 'Buruk' : 'Lumayan'),
+      limit: 'Batas WHO: 45 µg/m³',
       desc: 'Abu pembakaran vegetasi hutan/semak dan debu kasar di atmosfer.',
       icon: <Wind className="h-4 w-4 text-sky-600 dark:text-sky-400" />,
-      badgeClass: 'bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800',
+      badgeClass:
+        pm10Aqi <= 49
+          ? 'bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800'
+          : 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800',
     },
     {
       key: 'O3',
       title: 'Ozon Permukaan (O3)',
-      value: pollutants.ozone.toFixed(2),
+      value: pollutants.ozone.toFixed(0),
       unit: 'µg/m³',
-      pct: getPollutantPercentage('o3', pollutants.ozone),
+      aqiTag: `${o3Aqi} AQI`,
+      category: pollutants.o3_category || 'Bagus Sekali',
       limit: 'Ambang Referensi: 100 µg/m³',
       desc: 'Gas fotokimia yang terbentuk dari reaksi polutan asap dengan sinar matahari terik.',
       icon: <Sun className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />,
@@ -50,9 +62,10 @@ export const PollutantGrid: React.FC<PollutantGridProps> = ({ pollutants }) => {
     {
       key: 'NO2',
       title: 'Nitrogen Dioksida (NO2)',
-      value: pollutants.nitrogen_dioxide.toFixed(2),
+      value: pollutants.nitrogen_dioxide.toFixed(0),
       unit: 'µg/m³',
-      pct: getPollutantPercentage('no2', pollutants.nitrogen_dioxide),
+      aqiTag: `${no2Aqi} AQI`,
+      category: pollutants.no2_category || 'Lumayan',
       limit: 'Ambang Referensi: 25 µg/m³',
       desc: 'Gas hasil pembakaran biomassa suhu tinggi dan emisi kendaraan bermotor.',
       icon: <Activity className="h-4 w-4 text-teal-600 dark:text-teal-400" />,
@@ -61,9 +74,10 @@ export const PollutantGrid: React.FC<PollutantGridProps> = ({ pollutants }) => {
     {
       key: 'CO',
       title: 'Karbon Monoksida (CO Asap)',
-      value: pollutants.carbon_monoxide.toFixed(1),
+      value: pollutants.carbon_monoxide.toFixed(0),
       unit: 'µg/m³',
-      pct: getPollutantPercentage('co', pollutants.carbon_monoxide),
+      aqiTag: `${coAqi} AQI`,
+      category: pollutants.co_category || 'Bagus Sekali',
       limit: 'Indikator Pembakaran Lahan',
       desc: 'Penanda khas pembakaran tidak sempurna dari kayu, gambut, dan lahan kering.',
       icon: <Flame className="h-4 w-4 text-amber-600 dark:text-amber-400" />,
@@ -74,7 +88,8 @@ export const PollutantGrid: React.FC<PollutantGridProps> = ({ pollutants }) => {
       title: 'Ketebalan Optik Asap (AOD)',
       value: pollutants.aerosol_optical_depth.toFixed(2),
       unit: 'Indeks',
-      pct: Math.min(99, Math.round(pollutants.aerosol_optical_depth * 100)),
+      aqiTag: 'Satelit',
+      category: pollutants.aerosol_optical_depth > 0.4 ? 'Asap Tebal' : 'Sedang',
       limit: 'Normal < 0.20',
       desc: 'Mengukur seberapa pekat kolom kabut asap menghalangi cahaya matahari.',
       icon: <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400" />,
@@ -101,11 +116,16 @@ export const PollutantGrid: React.FC<PollutantGridProps> = ({ pollutants }) => {
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">{item.title}</p>
               </div>
             </div>
-            <span
-              className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${item.badgeClass}`}
-            >
-              {item.pct}% Indeks
-            </span>
+            <div className="flex flex-col items-end">
+              <span
+                className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${item.badgeClass}`}
+              >
+                {item.aqiTag}
+              </span>
+              <span className="mt-1 text-[10px] font-semibold text-slate-400 dark:text-slate-500">
+                {item.category}
+              </span>
+            </div>
           </div>
 
           <div className="mt-4 flex items-baseline gap-1.5">

@@ -8,7 +8,9 @@ export const SULTENG_CITIES: CityLocation[] = [
     district: 'Pusat Ibukota Provinsi Sulawesi Tengah',
     lat: -0.8917,
     lng: 119.8707,
-    bmkgAdm4: '72.71.03.1001', // Kel. Tatura Utara, Kec. Palu Selatan, Kota Palu
+    bmkgAdm4: '72.71.03.1001',
+    accuweatherSlug: 'palu',
+    accuweatherKey: '205850',
     description: 'Ibukota Provinsi Sulawesi Tengah, area pesisir Teluk Palu dan lembah Palu.',
     isProvincialCapital: true,
   },
@@ -19,7 +21,9 @@ export const SULTENG_CITIES: CityLocation[] = [
     district: 'Kabupaten Donggala',
     lat: -0.6860,
     lng: 119.7420,
-    bmkgAdm4: '72.03.08.2012', // Desa Loli Oge, Kec. Banawa, Kab. Donggala
+    bmkgAdm4: '72.03.08.2012',
+    accuweatherSlug: 'donggala',
+    accuweatherKey: '1897258',
     description: 'Wilayah pesisir barat Sulteng, berbatasan langsung dengan Selat Makassar.',
   },
   {
@@ -29,7 +33,9 @@ export const SULTENG_CITIES: CityLocation[] = [
     district: 'Kabupaten Sigi',
     lat: -1.3849,
     lng: 119.9654,
-    bmkgAdm4: '72.10.01.2001', // Desa Sidondo II, Kec. Sigi Biromaru, Kab. Sigi
+    bmkgAdm4: '72.10.01.2001',
+    accuweatherSlug: 'sigi-biromaru',
+    accuweatherKey: '2049393',
     description: 'Wilayah lembah dan perbukitan agraris, rentan terhadap asap lembah dan kebakaran semak.',
   },
   {
@@ -39,7 +45,9 @@ export const SULTENG_CITIES: CityLocation[] = [
     district: 'Kabupaten Parigi Moutong',
     lat: -0.8184,
     lng: 120.1878,
-    bmkgAdm4: '72.08.01.1018', // Kel. Maesa, Kec. Parigi, Kab. Parigi Moutong
+    bmkgAdm4: '72.08.01.1018',
+    accuweatherSlug: 'parigi',
+    accuweatherKey: '2052342',
     description: 'Garis pantai Teluk Tomini terpanjang di Sulteng, kawasan perkebunan dan kehutanan.',
   },
   {
@@ -49,7 +57,9 @@ export const SULTENG_CITIES: CityLocation[] = [
     district: 'Kabupaten Poso',
     lat: -1.3959,
     lng: 120.7524,
-    bmkgAdm4: '72.02.01.1001', // Kel. Moengko Lama, Kec. Poso Kota, Kab. Poso
+    bmkgAdm4: '72.02.01.1001',
+    accuweatherSlug: 'poso',
+    accuweatherKey: '205881',
     description: 'Wilayah Danau Poso dan pegunungan Lore Lindu dengan tutupan hutan luas.',
   },
   {
@@ -59,7 +69,9 @@ export const SULTENG_CITIES: CityLocation[] = [
     district: 'Kabupaten Tojo Una-Una',
     lat: -0.8681,
     lng: 121.5833,
-    bmkgAdm4: '72.09.05.1002', // Kel. Malotong, Kec. Ampana Kota, Kab. Tojo Una-Una
+    bmkgAdm4: '72.09.05.1002',
+    accuweatherSlug: 'ampana',
+    accuweatherKey: '205898',
     description: 'Pesisir timur dan gugusan Kepulauan Togean di Teluk Tomini.',
   },
   {
@@ -69,7 +81,9 @@ export const SULTENG_CITIES: CityLocation[] = [
     district: 'Kabupaten Tolitoli',
     lat: 1.0378,
     lng: 120.8197,
-    bmkgAdm4: '72.04.07.1001', // Kel. Tambun, Kec. Baolan, Kab. Tolitoli
+    bmkgAdm4: '72.04.07.1001',
+    accuweatherSlug: 'tolitoli',
+    accuweatherKey: '205859',
     description: 'Ujung barat laut Sulawesi Tengah, menghadap Laut Sulawesi.',
   },
   {
@@ -79,7 +93,9 @@ export const SULTENG_CITIES: CityLocation[] = [
     district: 'Kabupaten Buol',
     lat: 1.1733,
     lng: 121.4367,
-    bmkgAdm4: '72.05.06.1001', // Kel. Buol, Kec. Biau, Kab. Buol
+    bmkgAdm4: '72.05.06.1001',
+    accuweatherSlug: 'buol',
+    accuweatherKey: '3479186',
     description: 'Wilayah utara Sulteng, kawasan hutan hujan dan perkebunan sawit.',
   },
   {
@@ -89,7 +105,9 @@ export const SULTENG_CITIES: CityLocation[] = [
     district: 'Kabupaten Morowali',
     lat: -2.5408,
     lng: 121.9687,
-    bmkgAdm4: '72.06.05.1014', // Kel. Mendui, Kec. Bungku Tengah, Kab. Morowali
+    bmkgAdm4: '72.06.05.1014',
+    accuweatherSlug: 'bungku',
+    accuweatherKey: '2069995',
     description: 'Kawasan industri hilirisasi dan pesisir selatan Sulteng, berbatasan dengan Sultra.',
   },
   {
@@ -99,7 +117,9 @@ export const SULTENG_CITIES: CityLocation[] = [
     district: 'Kabupaten Morowali Utara',
     lat: -1.9822,
     lng: 121.3323,
-    bmkgAdm4: '72.12.01.1001', // Kel. Kolonodale, Kec. Petasia, Kab. Morowali Utara
+    bmkgAdm4: '72.12.01.1001',
+    accuweatherSlug: 'kolonodale',
+    accuweatherKey: '205853',
     description: 'Area Teluk Tomori, pertambangan, dan hutan dataran tinggi.',
   },
   {
@@ -109,7 +129,9 @@ export const SULTENG_CITIES: CityLocation[] = [
     district: 'Kabupaten Banggai',
     lat: -0.9516,
     lng: 122.7875,
-    bmkgAdm4: '72.01.04.1009', // Kel. Luwuk, Kec. Luwuk, Kab. Banggai
+    bmkgAdm4: '72.01.04.1009',
+    accuweatherSlug: 'luwuk',
+    accuweatherKey: '205854',
     description: 'Semenanjung timur Sulawesi Tengah, pusat ekonomi bagian timur.',
   },
   {
@@ -119,7 +141,9 @@ export const SULTENG_CITIES: CityLocation[] = [
     district: 'Kabupaten Banggai Kepulauan',
     lat: -1.3197,
     lng: 123.1492,
-    bmkgAdm4: '72.07.04.2009', // Desa Manggalai, Kec. Tinangkung, Kab. Banggai Kepulauan
+    bmkgAdm4: '72.07.04.2009',
+    accuweatherSlug: 'salakan',
+    accuweatherKey: '205932',
     description: 'Wilayah kepulauan di Selat Peleng.',
   },
   {
@@ -129,7 +153,9 @@ export const SULTENG_CITIES: CityLocation[] = [
     district: 'Kabupaten Banggai Laut',
     lat: -1.6111,
     lng: 123.5042,
-    bmkgAdm4: '72.11.01.2001', // Desa Lambako, Kec. Banggai, Kab. Banggai Laut
+    bmkgAdm4: '72.11.01.2001',
+    accuweatherSlug: 'banggai',
+    accuweatherKey: '3479443',
     description: 'Gugusan pulau di perbatasan Laut Maluku dan Laut Banda.',
   },
 ];

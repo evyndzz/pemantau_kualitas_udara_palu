@@ -35,34 +35,111 @@ export function calculatePM10ISPU(pm10: number): number {
 }
 
 /**
- * Computes a relative index/saturation percentage (8% - 99%) for the floating bubble pill
- * based on standard daily reference thresholds (WHO / KLHK).
+ * AccuWeather (Plume Labs) AQI Sub-Index Calculators
+ * Verified against live AccuWeather Indonesia Air Quality pages:
+ * - PM2.5 = 42 µg/m³ -> 120 AQI ("Tidak Sehat")
+ * - PM10  = 62 µg/m³ -> 74 AQI  ("Buruk")
+ * - NO2   = 17 µg/m³ -> 34 AQI  ("Lumayan")
+ * - O3    = 40 µg/m³ -> 13 AQI  ("Bagus Sekali")
+ * - CO    = 666 µg/m³ -> 7 AQI  ("Bagus Sekali")
+ */
+export function calculateAccuWeatherPM25AQI(pm25: number): number {
+  if (pm25 <= 0) return 0;
+  if (pm25 <= 10) return Math.round((pm25 / 10) * 20);
+  if (pm25 <= 20) return Math.round(20 + ((pm25 - 10) / 10) * 30);
+  if (pm25 <= 35) return Math.round(50 + ((pm25 - 20) / 15) * 50);
+  if (pm25 <= 52.5) return Math.round(100 + ((pm25 - 35) / 17.5) * 50);
+  if (pm25 <= 100) return Math.round(150 + ((pm25 - 52.5) / 47.5) * 50);
+  return Math.round(200 + ((pm25 - 100) / 50) * 50);
+}
+
+export function calculateAccuWeatherPM10AQI(pm10: number): number {
+  if (pm10 <= 0) return 0;
+  if (pm10 <= 20) return Math.round((pm10 / 20) * 20);
+  if (pm10 <= 50) return Math.round(20 + ((pm10 - 20) / 30) * 30);
+  if (pm10 <= 75) return Math.round(50 + ((pm10 - 50) / 25) * 50);
+  if (pm10 <= 150) return Math.round(100 + ((pm10 - 75) / 75) * 50);
+  return Math.round(150 + ((pm10 - 150) / 100) * 50);
+}
+
+export function calculateAccuWeatherNO2AQI(no2: number): number {
+  if (no2 <= 0) return 0;
+  if (no2 <= 25) return Math.round((no2 / 25) * 50);
+  if (no2 <= 100) return Math.round(50 + ((no2 - 25) / 75) * 50);
+  return Math.round(100 + ((no2 - 100) / 100) * 50);
+}
+
+export function calculateAccuWeatherO3AQI(o3: number): number {
+  if (o3 <= 0) return 0;
+  if (o3 <= 60) return Math.round((o3 / 60) * 20);
+  if (o3 <= 100) return Math.round(20 + ((o3 - 60) / 40) * 30);
+  if (o3 <= 160) return Math.round(50 + ((o3 - 100) / 60) * 50);
+  return Math.round(100 + ((o3 - 160) / 60) * 50);
+}
+
+export function calculateAccuWeatherCOAQI(co: number): number {
+  if (co <= 0) return 0;
+  if (co <= 2000) return Math.max(1, Math.round((co / 2000) * 20));
+  if (co <= 4000) return Math.round(20 + ((co - 2000) / 2000) * 30);
+  return Math.round(50 + ((co - 4000) / 6000) * 50);
+}
+
+export function calculateAccuWeatherOverallAQI(
+  pm25: number,
+  pm10: number,
+  no2 = 0,
+  o3 = 0,
+  co = 0
+): number {
+  return Math.max(
+    calculateAccuWeatherPM25AQI(pm25),
+    calculateAccuWeatherPM10AQI(pm10),
+    calculateAccuWeatherNO2AQI(no2),
+    calculateAccuWeatherO3AQI(o3),
+    calculateAccuWeatherCOAQI(co)
+  );
+}
+
+export function getAccuWeatherCategoryLabel(aqi: number): string {
+  if (aqi <= 19) return 'Bagus Sekali';
+  if (aqi <= 49) return 'Lumayan';
+  if (aqi <= 99) return 'Buruk';
+  if (aqi <= 149) return 'Tidak Sehat';
+  if (aqi <= 249) return 'Sangat Tidak Sehat';
+  return 'Berbahaya';
+}
+
+/**
+ * Computes the AccuWeather AQI sub-index for the floating map bubble & pollutant cards
  */
 export function getPollutantPercentage(
   type: 'pm2_5' | 'pm10' | 'o3' | 'no2' | 'co',
   value: number
 ): number {
-  const referenceThresholds = {
-    pm2_5: 15.5,
-    pm10: 45.0,
-    o3: 100.0,
-    no2: 25.0,
-    co: 4000.0,
-  };
-  const ref = referenceThresholds[type] || 50;
-  const pct = Math.round((value / ref) * 100);
-  return Math.max(8, Math.min(99, pct));
+  switch (type) {
+    case 'pm2_5':
+      return Math.max(1, calculateAccuWeatherPM25AQI(value));
+    case 'pm10':
+      return Math.max(1, calculateAccuWeatherPM10AQI(value));
+    case 'no2':
+      return Math.max(1, calculateAccuWeatherNO2AQI(value));
+    case 'o3':
+      return Math.max(1, calculateAccuWeatherO3AQI(value));
+    case 'co':
+      return Math.max(1, calculateAccuWeatherCOAQI(value));
+  }
 }
 
 export function getISPUDetails(score: number, usAqiScore?: number): ISPUInfo {
   const effectiveAqi = usAqiScore ?? score;
+  const evalScore = Math.max(score, effectiveAqi);
 
-  if (score <= 50) {
+  if (evalScore <= 50) {
     return {
       score,
       usAqiScore: effectiveAqi,
       category: 'BAIK',
-      englishLabel: 'Sangat Baik',
+      englishLabel: getAccuWeatherCategoryLabel(effectiveAqi),
       emoji: '',
       colorName: 'Hijau',
       colorHex: '#10B981',
@@ -73,7 +150,7 @@ export function getISPUDetails(score: number, usAqiScore?: number): ISPUInfo {
       pillClass: 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/60',
       ringClass: 'ring-emerald-500/20',
       hazeRisk: 'Aman',
-      description: 'Kualitas udara sangat bersih dan segar. Tidak terdeteksi paparan kabut asap karhutla yang membahayakan.',
+      description: 'Kualitas udara sangat ideal bagi sebagian besar orang; nikmati aktivitas normal Anda di luar ruangan.',
       actionAdvice: 'Sangat aman untuk beraktivitas di luar ruangan. Buka ventilasi jendela rumah untuk sirkulasi udara segar.',
       maskRecommendation: 'Tidak diperlukan masker polusi untuk aktivitas luar ruang.',
       outdoorAdvice: 'Aman untuk olahraga pagi/sore, aktivitas sekolah, dan kegiatan luar ruang.',
@@ -81,12 +158,12 @@ export function getISPUDetails(score: number, usAqiScore?: number): ISPUInfo {
     };
   }
 
-  if (score <= 100) {
+  if (evalScore <= 100) {
     return {
       score,
       usAqiScore: effectiveAqi,
       category: 'SEDANG',
-      englishLabel: 'Sedang',
+      englishLabel: getAccuWeatherCategoryLabel(effectiveAqi),
       emoji: '',
       colorName: 'Biru / Toska',
       colorHex: '#06B6D4',
@@ -97,20 +174,20 @@ export function getISPUDetails(score: number, usAqiScore?: number): ISPUInfo {
       pillClass: 'bg-cyan-50 dark:bg-cyan-950/60 text-cyan-700 dark:text-cyan-300 border border-cyan-200/80 dark:border-cyan-800/60',
       ringClass: 'ring-cyan-500/20',
       hazeRisk: 'Waspada Asap',
-      description: 'Kualitas udara masih dapat diterima, namun terdapat peningkatan partikel halus PM2.5 atau sisa pembakaran lahan.',
+      description: 'Udara telah mencapai tingkat polusi sedang. Kelompok yang sensitif sebaiknya mengurangi aktivitas di luar ruangan jika mengalami gejala pernapasan.',
       actionAdvice: 'Masyarakat umum dapat beraktivitas normal. Kelompok yang sangat sensitif terhadap asap sebaiknya mengurangi aktivitas fisik berat.',
       maskRecommendation: 'Penderita asma/ISPA disarankan membawa masker medis atau KF94 saat bepergian.',
-      outdoorAdvice: 'Aktivitas luar ruangan masih aman, pantau terus perubahan arah angin.',
+      outdoorAdvice: 'Aktivitas luar ruangan masih dapat dilakukan, pantau terus perubahan arah angin.',
       vulnerableGroupAdvice: 'Anak balita, lansia, dan penderita asma perlu waspada bila mulai tercium bau asap.',
     };
   }
 
-  if (score <= 200) {
+  if (evalScore <= 200) {
     return {
       score,
       usAqiScore: effectiveAqi,
       category: 'TIDAK SEHAT',
-      englishLabel: 'Tidak Sehat',
+      englishLabel: getAccuWeatherCategoryLabel(effectiveAqi),
       emoji: '',
       colorName: 'Kuning / Jingga',
       colorHex: '#F59E0B',
@@ -129,12 +206,12 @@ export function getISPUDetails(score: number, usAqiScore?: number): ISPUInfo {
     };
   }
 
-  if (score <= 300) {
+  if (evalScore <= 300) {
     return {
       score,
       usAqiScore: effectiveAqi,
       category: 'SANGAT TIDAK SEHAT',
-      englishLabel: 'Sangat Tidak Sehat',
+      englishLabel: getAccuWeatherCategoryLabel(effectiveAqi),
       emoji: '',
       colorName: 'Merah',
       colorHex: '#EF4444',
@@ -157,7 +234,7 @@ export function getISPUDetails(score: number, usAqiScore?: number): ISPUInfo {
     score,
     usAqiScore: effectiveAqi,
     category: 'BERBAHAYA',
-    englishLabel: 'Berbahaya',
+    englishLabel: getAccuWeatherCategoryLabel(effectiveAqi),
     emoji: '',
     colorName: 'Ungu / Marun',
     colorHex: '#9333EA',
