@@ -34,113 +34,160 @@ export function calculatePM10ISPU(pm10: number): number {
   return Math.round(((500 - 301) / (600 - 421)) * Math.min(pm10 - 421, 179) + 301);
 }
 
-export function getISPUDetails(score: number): ISPUInfo {
+/**
+ * Computes a relative index/saturation percentage (8% - 99%) for the floating bubble pill
+ * based on standard daily reference thresholds (WHO / KLHK).
+ */
+export function getPollutantPercentage(
+  type: 'pm2_5' | 'pm10' | 'o3' | 'no2' | 'co',
+  value: number
+): number {
+  const referenceThresholds = {
+    pm2_5: 15.5,
+    pm10: 45.0,
+    o3: 100.0,
+    no2: 25.0,
+    co: 4000.0,
+  };
+  const ref = referenceThresholds[type] || 50;
+  const pct = Math.round((value / ref) * 100);
+  return Math.max(8, Math.min(99, pct));
+}
+
+export function getISPUDetails(score: number, usAqiScore?: number): ISPUInfo {
+  const effectiveAqi = usAqiScore ?? score;
+
   if (score <= 50) {
     return {
       score,
+      usAqiScore: effectiveAqi,
       category: 'BAIK',
+      englishLabel: 'Sangat Baik',
+      emoji: '',
       colorName: 'Hijau',
-      bgClass: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400',
+      colorHex: '#10B981',
+      bgClass: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300',
       borderClass: 'border-emerald-500',
-      textClass: 'text-emerald-400',
-      badgeBg: 'bg-emerald-500 text-slate-950',
-      ringClass: 'ring-emerald-500/30 shadow-emerald-500/20',
+      textClass: 'text-emerald-600 dark:text-emerald-400',
+      badgeBg: 'bg-emerald-500 text-white',
+      pillClass: 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/60',
+      ringClass: 'ring-emerald-500/20',
       hazeRisk: 'Aman',
-      description: 'Kualitas udara sangat baik. Tidak ada risiko kesehatan atau dampak asap kebakaran.',
-      actionAdvice: 'Aktivitas luar ruangan aman untuk semua orang. Ventilasi udara rumah dapat dibuka leluasa.',
-      maskRecommendation: 'Tidak diperlukan masker untuk perlindungan polusi udara.',
-      outdoorAdvice: 'Aman untuk jogging, olahraga luar ruangan, dan aktivitas anak-anak.',
-      vulnerableGroupAdvice: 'Semua kelompok aman, tidak ada pembatasan aktivitas fisik.',
+      description: 'Kualitas udara sangat bersih dan segar. Tidak terdeteksi paparan kabut asap karhutla yang membahayakan.',
+      actionAdvice: 'Sangat aman untuk beraktivitas di luar ruangan. Buka ventilasi jendela rumah untuk sirkulasi udara segar.',
+      maskRecommendation: 'Tidak diperlukan masker polusi untuk aktivitas luar ruang.',
+      outdoorAdvice: 'Aman untuk olahraga pagi/sore, aktivitas sekolah, dan kegiatan luar ruang.',
+      vulnerableGroupAdvice: 'Seluruh kelompok masyarakat (termasuk anak-anak & lansia) dapat beraktivitas normal.',
     };
   }
 
   if (score <= 100) {
     return {
       score,
+      usAqiScore: effectiveAqi,
       category: 'SEDANG',
-      colorName: 'Biru',
-      bgClass: 'bg-sky-500/10 border-sky-500/30 text-sky-400',
-      borderClass: 'border-sky-500',
-      textClass: 'text-sky-400',
-      badgeBg: 'bg-sky-500 text-slate-950',
-      ringClass: 'ring-sky-500/30 shadow-sky-500/20',
+      englishLabel: 'Sedang',
+      emoji: '',
+      colorName: 'Biru / Toska',
+      colorHex: '#06B6D4',
+      bgClass: 'bg-cyan-50 dark:bg-cyan-950/40 border-cyan-200 dark:border-cyan-800/60 text-cyan-700 dark:text-cyan-300',
+      borderClass: 'border-cyan-500',
+      textClass: 'text-cyan-600 dark:text-cyan-400',
+      badgeBg: 'bg-cyan-500 text-white',
+      pillClass: 'bg-cyan-50 dark:bg-cyan-950/60 text-cyan-700 dark:text-cyan-300 border border-cyan-200/80 dark:border-cyan-800/60',
+      ringClass: 'ring-cyan-500/20',
       hazeRisk: 'Waspada Asap',
-      description: 'Kualitas udara dapat diterima. Terdapat sedikit partikel debu halus atau sisa asap di udara.',
-      actionAdvice: 'Masyarakat umum dapat beraktivitas normal. Kelompok sangat sensitif perlu waspada terhadap batuk atau iritasi.',
-      maskRecommendation: 'Kelompok penderita asma/alergi disarankan menyiapkan masker jika sensitif.',
-      outdoorAdvice: 'Aktivitas luar ruangan masih aman, pantau perubahan arah tiupan asap.',
-      vulnerableGroupAdvice: 'Penderita asma & anak balita sebaiknya tidak terlalu lama terpapar udara luar jika mulai berbau sangit.',
+      description: 'Kualitas udara masih dapat diterima, namun terdapat peningkatan partikel halus PM2.5 atau sisa pembakaran lahan.',
+      actionAdvice: 'Masyarakat umum dapat beraktivitas normal. Kelompok yang sangat sensitif terhadap asap sebaiknya mengurangi aktivitas fisik berat.',
+      maskRecommendation: 'Penderita asma/ISPA disarankan membawa masker medis atau KF94 saat bepergian.',
+      outdoorAdvice: 'Aktivitas luar ruangan masih aman, pantau terus perubahan arah angin.',
+      vulnerableGroupAdvice: 'Anak balita, lansia, dan penderita asma perlu waspada bila mulai tercium bau asap.',
     };
   }
 
   if (score <= 200) {
     return {
       score,
+      usAqiScore: effectiveAqi,
       category: 'TIDAK SEHAT',
-      colorName: 'Kuning',
-      bgClass: 'bg-amber-500/10 border-amber-500/30 text-amber-400',
+      englishLabel: 'Tidak Sehat',
+      emoji: '',
+      colorName: 'Kuning / Jingga',
+      colorHex: '#F59E0B',
+      bgClass: 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300',
       borderClass: 'border-amber-500',
-      textClass: 'text-amber-400',
-      badgeBg: 'bg-amber-500 text-slate-950',
-      ringClass: 'ring-amber-500/30 shadow-amber-500/20',
+      textClass: 'text-amber-600 dark:text-amber-400',
+      badgeBg: 'bg-amber-500 text-white',
+      pillClass: 'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/60',
+      ringClass: 'ring-amber-500/25',
       hazeRisk: 'Siaga Asap',
-      description: 'Udara mulai tercemar kabut asap karhutla. Mulai merugikan kesehatan kelompok sensitif dan masyarakat.',
-      actionAdvice: 'Kurangi aktivitas di luar ruangan. Tutup pintu dan jendela rumah agar asap kebakaran tidak masuk ke dalam.',
-      maskRecommendation: 'Wajib gunakan masker (minimal masker bedah atau masker N95/KF94) jika terpaksa keluar.',
-      outdoorAdvice: 'Hindari olahraga berat di luar ruangan (seperti lari atau bersepeda).',
-      vulnerableGroupAdvice: 'Lansia, ibu hamil, balita, dan penderita asma/jantung HARUS tetap berada di dalam ruangan.',
+      description: 'Udara tercemar kabut asap karhutla. Berisiko menimbulkan iritasi mata, batuk, dan gangguan pernapasan.',
+      actionAdvice: 'Kurangi aktivitas di luar ruangan. Tutup pintu dan jendela rumah agar partikel asap tidak masuk.',
+      maskRecommendation: 'Wajib gunakan masker N95, KN95, atau KF94 saat berada di luar ruangan.',
+      outdoorAdvice: 'Hindari olahraga luar ruangan. Gunakan pelindung mata jika berkendara.',
+      vulnerableGroupAdvice: 'Ibu hamil, balita, lansia, dan penderita asma/jantung wajib tetap di dalam ruangan.',
     };
   }
 
   if (score <= 300) {
     return {
       score,
+      usAqiScore: effectiveAqi,
       category: 'SANGAT TIDAK SEHAT',
+      englishLabel: 'Sangat Tidak Sehat',
+      emoji: '',
       colorName: 'Merah',
-      bgClass: 'bg-rose-500/10 border-rose-500/30 text-rose-400',
+      colorHex: '#EF4444',
+      bgClass: 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800/60 text-rose-800 dark:text-rose-300',
       borderClass: 'border-rose-500',
-      textClass: 'text-rose-400',
-      badgeBg: 'bg-rose-500 text-white',
-      ringClass: 'ring-rose-500/40 shadow-rose-500/30',
+      textClass: 'text-rose-600 dark:text-rose-400',
+      badgeBg: 'bg-rose-600 text-white',
+      pillClass: 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200/80 dark:border-rose-800/60',
+      ringClass: 'ring-rose-500/30',
       hazeRisk: 'Darurat Asap',
-      description: 'Kabut asap pekat. Berbahaya bagi kesehatan seluruh populasi dengan peningkatan gejala ISPA secara drastis.',
-      actionAdvice: 'Tetap berada di dalam ruangan tertutup. Nyalakan air purifier atau pasang kain basah di celah jendela.',
-      maskRecommendation: 'WAJIB gunakan masker respirator N95/KN95/KF94 saat beraktivitas di luar.',
-      outdoorAdvice: 'HENTIKAN seluruh aktivitas luar ruangan, olahraga, dan kegiatan sekolah luar ruang.',
-      vulnerableGroupAdvice: 'Kelompok rentan berisiko tinggi sesak napas darurat. Segera hubungi fasilitas kesehatan jika nafas berat.',
+      description: 'Kabut asap pekat berbahaya bagi kesehatan seluruh warga. Risiko lonjakan ISPA akut sangat tinggi.',
+      actionAdvice: 'Tetap di dalam ruangan tertutup. Nyalakan penyaring udara (air purifier) atau pasang kain basah di celah ventilasi.',
+      maskRecommendation: 'WAJIB respirator N95/KN95 tertutup rapat apabila terpaksa keluar rumah.',
+      outdoorAdvice: 'Hentikan seluruh kegiatan luar ruangan dan olahraga.',
+      vulnerableGroupAdvice: 'Segera hubungi fasilitas medis (119 / RSUD) jika mengalami sesak napas.',
     };
   }
 
   return {
     score,
+    usAqiScore: effectiveAqi,
     category: 'BERBAHAYA',
-    colorName: 'Hitam / Marun',
-    bgClass: 'bg-purple-950/40 border-purple-500/50 text-purple-300',
-    borderClass: 'border-purple-500',
-    textClass: 'text-purple-300',
-    badgeBg: 'bg-purple-600 text-white',
-    ringClass: 'ring-purple-500/50 shadow-purple-500/40',
+    englishLabel: 'Berbahaya',
+    emoji: '',
+    colorName: 'Ungu / Marun',
+    colorHex: '#9333EA',
+    bgClass: 'bg-purple-50 dark:bg-purple-950/40 border-purple-200 dark:border-purple-800/60 text-purple-900 dark:text-purple-300',
+    borderClass: 'border-purple-600',
+    textClass: 'text-purple-700 dark:text-purple-400',
+    badgeBg: 'bg-purple-700 text-white',
+    pillClass: 'bg-purple-50 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 border border-purple-200/80 dark:border-purple-800/60',
+    ringClass: 'ring-purple-500/30',
     hazeRisk: 'Darurat Asap',
-    description: 'Status darurat pencemaran udara ekstrem akibat karhutla parah. Seluruh populasi terdampak serius.',
-    actionAdvice: 'DARURAT! Jangan keluar rumah sama sekali. Tutup semua celah ventilasi. Hubungi call center darurat jika butuh tabung oksigen.',
-    maskRecommendation: 'Respirator N95/FFP2 tertutup rapat mutlak diperlukan bila evakuasi.',
-    outdoorAdvice: 'DILARANG beraktivitas di luar ruangan. Jarak pandang sangat rendah dan berbahaya.',
-    vulnerableGroupAdvice: 'Evakuasi ke posko udara bersih atau ruangan dengan filtrasi HEPA jika memungkinkan.',
+    description: 'Darurat pencemaran asap ekstrem! Seluruh populasi berisiko mengalami dampak kesehatan serius.',
+    actionAdvice: 'DARURAT! Jangan keluar rumah. Tutup rapat seluruh ventilasi dan hubungi posko BPBD/medis bila butuh bantuan oksigen.',
+    maskRecommendation: 'Respirator N95/FFP2 mutlak diperlukan.',
+    outdoorAdvice: 'DILARANG beraktivitas di luar ruangan.',
+    vulnerableGroupAdvice: 'Prioritaskan evakuasi kelompok rentan ke ruang udara bersih.',
   };
 }
 
 export function getISPUColorHex(category: ISPUCategory): string {
   switch (category) {
     case 'BAIK':
-      return '#10b981'; // Green
+      return '#10B981';
     case 'SEDANG':
-      return '#38bdf8'; // Blue
+      return '#06B6D4';
     case 'TIDAK SEHAT':
-      return '#f59e0b'; // Amber / Yellow
+      return '#F59E0B';
     case 'SANGAT TIDAK SEHAT':
-      return '#ef4444'; // Red
+      return '#EF4444';
     case 'BERBAHAYA':
-      return '#881337'; // Deep Maroon / Black
+      return '#9333EA';
   }
 }
 
@@ -148,15 +195,34 @@ export function formatWITA(isoString: string): string {
   try {
     const d = new Date(isoString);
     if (isNaN(d.getTime())) return isoString;
+    return (
+      new Intl.DateTimeFormat('id-ID', {
+        timeZone: 'Asia/Makassar',
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      }).format(d) + ' WITA'
+    );
+  } catch {
+    return isoString;
+  }
+}
+
+export function formatTooltipDate(isoString: string): string {
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return isoString;
     return new Intl.DateTimeFormat('id-ID', {
       timeZone: 'Asia/Makassar',
-      weekday: 'long',
+      weekday: 'short',
       day: 'numeric',
       month: 'short',
       year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(d) + ' WITA';
+    }).format(d);
   } catch {
     return isoString;
   }
@@ -169,14 +235,17 @@ export function formatHourShort(isoString: string): string {
       timeZone: 'Asia/Makassar',
       hour: '2-digit',
       minute: '2-digit',
-    }).format(d);
+      hour12: false,
+    })
+      .format(d)
+      .replace('.', ':');
   } catch {
     return '';
   }
 }
 
 export function getWindDirectionLabel(deg: number): string {
-  const directions = ['U', 'TL', 'T', 'TG', 'S', 'BD', 'B', 'BL'];
-  const index = Math.round(((deg % 360) / 45)) % 8;
+  const directions = ['Utara', 'Timur Laut', 'Timur', 'Tenggara', 'Selatan', 'Barat Daya', 'Barat', 'Barat Laut'];
+  const index = Math.round((deg % 360) / 45) % 8;
   return directions[index];
 }

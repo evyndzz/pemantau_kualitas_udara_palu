@@ -1,188 +1,192 @@
-import React from 'react';
-import { AlertTriangle, Flame, HeartPulse, Info, ShieldAlert } from 'lucide-react';
+import React, { useState } from 'react';
 import type { AirQualityResponse, ISPUInfo } from '../types';
-import { formatWITA } from '../utils/aqiCalculator';
+import { StatusShieldBadgeIcon } from './CustomIcons';
 
 interface AQIHeroCardProps {
   data: AirQualityResponse;
   ispuInfo: ISPUInfo;
+  isDark?: boolean;
 }
 
-export const AQIHeroCard: React.FC<AQIHeroCardProps> = ({ data, ispuInfo }) => {
-  const { current, location, lastUpdated } = data;
+export const AQIHeroCard: React.FC<AQIHeroCardProps> = ({ data, ispuInfo, isDark = false }) => {
+  const [standard, setStandard] = useState<'aqi' | 'ispu'>('aqi');
 
-  // Determine progress percentage for visual bar (0 - 300+ mapped to 0% - 100%)
-  const percentage = Math.min(100, Math.max(5, (ispuInfo.score / 300) * 100));
+  const displayScore = standard === 'aqi' ? data.current.us_aqi : ispuInfo.score;
 
-  // Compare PM2.5 with WHO safe guideline (15 µg/m³ 24h)
-  const whoRatio = (current.pm2_5 / 15).toFixed(1);
+  // Map score (0..250) onto the 240-degree arc (from 150 deg to 390 deg)
+  const clampedScore = Math.max(0, Math.min(250, displayScore));
+  const ratio = clampedScore / 250;
+  const startAngleDeg = 150;
+  const sweepAngleDeg = 240;
+  const currentAngleDeg = startAngleDeg + ratio * sweepAngleDeg;
+  const currentAngleRad = (currentAngleDeg * Math.PI) / 180;
+
+  const cx = 120;
+  const cy = 104;
+  const radius = 76;
+
+  const startRad = (startAngleDeg * Math.PI) / 180;
+  const endRad = ((startAngleDeg + sweepAngleDeg) * Math.PI) / 180;
+
+  const x1 = cx + radius * Math.cos(startRad);
+  const y1 = cy + radius * Math.sin(startRad);
+  const x2 = cx + radius * Math.cos(endRad);
+  const y2 = cy + radius * Math.sin(endRad);
+
+  const thumbX = cx + radius * Math.cos(currentAngleRad);
+  const thumbY = cy + radius * Math.sin(currentAngleRad);
+
+  const arcPath = `M ${x1} ${y1} A ${radius} ${radius} 0 1 1 ${x2} ${y2}`;
 
   return (
-    <div className={`relative overflow-hidden rounded-3xl border ${ispuInfo.borderClass} bg-gradient-to-b from-slate-900/90 to-slate-950/95 p-6 shadow-2xl backdrop-blur-xl sm:p-8`}>
-      {/* Background glow effect based on air status */}
-      <div
-        className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full opacity-20 blur-3xl"
-        style={{
-          backgroundColor:
-            ispuInfo.category === 'BAIK'
-              ? '#10b981'
-              : ispuInfo.category === 'SEDANG'
-              ? '#38bdf8'
-              : ispuInfo.category === 'TIDAK SEHAT'
-              ? '#f59e0b'
-              : ispuInfo.category === 'SANGAT TIDAK SEHAT'
-              ? '#ef4444'
-              : '#9333ea',
-        }}
-      />
+    <div className="relative flex h-full flex-col items-center justify-between overflow-hidden px-5 pt-4 pb-3 select-none bg-gradient-to-b from-white via-white to-sky-50/40 dark:from-[#0D1322] dark:via-[#0D1322] dark:to-slate-900/60 theme-transition">
+      {/* Subtle Pastel / Dark City Skyline Silhouette at Bottom */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-0 opacity-75 dark:opacity-25">
+        <svg
+          viewBox="0 0 400 130"
+          className="w-full h-24 sm:h-28 object-cover"
+          preserveAspectRatio="none"
+          fill="none"
+        >
+          <path
+            d="M0 130V85H18V65H38V80H52V50H78V75H95V42H120V78H142V60H165V82H190V48H215V72H238V55H262V80H285V38H312V74H335V58H360V82H382V68H400V130H0Z"
+            fill={isDark ? '#1E293B' : '#E0F2FE'}
+            fillOpacity="0.75"
+          />
+          <path
+            d="M0 130V98H24V76H46V94H68V64H92V92H114C126 70 148 70 160 92C172 70 194 70 206 92H228V68H254V90H276V56H302V92H328V74H354V95H378V80H400V130H0Z"
+            fill={isDark ? '#334155' : '#CCFBF1'}
+            fillOpacity="0.65"
+          />
+        </svg>
+      </div>
 
-      <div className="relative z-10">
-        {/* Header row: Location & update time */}
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xl font-extrabold tracking-tight text-white sm:text-2xl lg:text-3xl">
-                {location.name}
-              </span>
-              <span className="rounded-lg bg-slate-800 px-2.5 py-0.5 text-xs font-semibold text-slate-300">
-                Sulteng
-              </span>
-            </div>
-            <p className="mt-0.5 text-xs text-slate-400">
-              {location.description}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2 self-start rounded-xl border border-slate-800 bg-slate-950/80 px-3 py-1.5 text-xs text-slate-300">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Pembaruan: <strong>{formatWITA(lastUpdated)}</strong></span>
-          </div>
+      {/* Top: City Name & Province */}
+      <div className="relative z-10 flex flex-col items-center text-center">
+        <h2 className="text-base sm:text-lg font-extrabold tracking-tight text-slate-900 dark:text-white line-clamp-1">
+          {data.location.name}
+        </h2>
+        <div className="mt-0.5 flex items-center gap-1.5 text-[11px] font-medium text-slate-500 dark:text-slate-400">
+          <span className="inline-flex h-3.5 w-3.5 overflow-hidden rounded-full border border-slate-200 dark:border-slate-700 shadow-2xs shrink-0">
+            <svg viewBox="0 0 16 16" className="h-full w-full">
+              <rect width="16" height="8" fill="#EF4444" />
+              <rect y="8" width="16" height="8" fill="#FFFFFF" />
+            </svg>
+          </span>
+          <span className="truncate max-w-[230px]">
+            {data.location.district || 'Sulawesi Tengah, Indonesia'}
+          </span>
         </div>
 
-        {/* Main AQI / ISPU display section */}
-        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-12 lg:items-center">
-          {/* Big number badge */}
-          <div className="flex flex-col sm:flex-row lg:col-span-5 items-start sm:items-center gap-5">
-            <div className={`flex flex-col items-center justify-center rounded-3xl border ${ispuInfo.borderClass} ${ispuInfo.bgClass} p-6 shadow-xl w-36 h-36 shrink-0`}>
-              <span className="text-xs font-semibold uppercase tracking-wider opacity-80">
-                ISPU KLHK
-              </span>
-              <span className="text-5xl font-black tracking-tighter">
-                {ispuInfo.score}
-              </span>
-              <span className="text-[11px] font-bold mt-1">
-                Indeks
-              </span>
-            </div>
-
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className={`inline-block rounded-xl px-3.5 py-1 text-sm font-extrabold tracking-wide uppercase ${ispuInfo.badgeBg}`}>
-                  {ispuInfo.category}
-                </span>
-
-                <span className="rounded-xl border border-slate-700 bg-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-300">
-                  US AQI: {current.us_aqi}
-                </span>
-              </div>
-
-              <div className="mt-2.5 flex items-center gap-2">
-                <Flame className={`h-4 w-4 ${ispuInfo.score > 100 ? 'text-amber-400 animate-pulse' : 'text-slate-500'}`} />
-                <span className="text-sm font-semibold text-slate-200">
-                  Status Bahaya Asap: <strong className={ispuInfo.textClass}>{ispuInfo.hazeRisk}</strong>
-                </span>
-              </div>
-
-              <p className="mt-1 text-xs leading-relaxed text-slate-300">
-                {ispuInfo.description}
-              </p>
-            </div>
-          </div>
-
-          {/* Scale meter bar */}
-          <div className="lg:col-span-7 flex flex-col justify-center rounded-2xl border border-slate-800/80 bg-slate-950/60 p-4 sm:p-5">
-            <div className="flex items-center justify-between text-xs font-semibold text-slate-400 mb-2">
-              <span>Rentang Kualitas Udara (Permen LHK No. 14/2020)</span>
-              <span className="font-bold text-slate-200">{ispuInfo.score} / 300+</span>
-            </div>
-
-            {/* Custom Multi-tier gradient progress bar */}
-            <div className="relative h-4 w-full overflow-hidden rounded-full bg-slate-800 p-0.5">
-              <div className="grid h-full w-full grid-cols-5 rounded-full overflow-hidden">
-                <div className="bg-emerald-500" title="0-50: Baik" />
-                <div className="bg-sky-500" title="51-100: Sedang" />
-                <div className="bg-amber-500" title="101-200: Tidak Sehat" />
-                <div className="bg-rose-500" title="201-300: Sangat Tidak Sehat" />
-                <div className="bg-purple-900" title=">300: Berbahaya" />
-              </div>
-              {/* Indicator needle */}
-              <div
-                className="absolute top-0 bottom-0 w-2.5 -ml-1 rounded-full border-2 border-white bg-slate-950 shadow-lg transition-all duration-500"
-                style={{ left: `${percentage}%` }}
-              />
-            </div>
-
-            <div className="mt-2 grid grid-cols-5 text-center text-[10px] font-bold text-slate-400">
-              <span className="text-emerald-400">Baik (0-50)</span>
-              <span className="text-sky-400">Sedang (100)</span>
-              <span className="text-amber-400">Tdk Sehat (200)</span>
-              <span className="text-rose-400">Sgt Buruk (300)</span>
-              <span className="text-purple-400">Bahaya (300+)</span>
-            </div>
-
-            {/* Key PM2.5 karhutla metric */}
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-800/80 pt-3 text-xs">
-              <div className="flex items-center gap-2">
-                <span className="text-slate-400">Partikel Utama Karhutla (PM2.5):</span>
-                <span className="text-base font-extrabold text-white">
-                  {current.pm2_5} <span className="text-xs font-normal text-slate-400">µg/m³</span>
-                </span>
-              </div>
-
-              <div className="flex items-center gap-1.5 rounded-lg bg-slate-900 px-2.5 py-1 text-[11px] font-medium text-slate-300">
-                <Info className="h-3.5 w-3.5 text-sky-400" />
-                <span>
-                  {Number(whoRatio) > 1
-                    ? `${whoRatio}x batas aman harian WHO`
-                    : 'Di bawah batas rekomendasi WHO'}
-                </span>
-              </div>
-            </div>
-          </div>
+        {/* Standard Switcher Pill (US AQI vs ISPU KLHK) */}
+        <div className="mt-1.5 inline-flex items-center rounded-full bg-slate-100/90 dark:bg-slate-800/90 p-0.5 text-[10px] font-bold">
+          <button
+            type="button"
+            onClick={() => setStandard('aqi')}
+            className={`rounded-full px-2.5 py-0.5 transition-all cursor-pointer ${
+              standard === 'aqi'
+                ? 'bg-white dark:bg-indigo-600 text-indigo-600 dark:text-white shadow-2xs'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            Indeks AQI
+          </button>
+          <button
+            type="button"
+            onClick={() => setStandard('ispu')}
+            className={`rounded-full px-2.5 py-0.5 transition-all cursor-pointer ${
+              standard === 'ispu'
+                ? 'bg-white dark:bg-indigo-600 text-indigo-600 dark:text-white shadow-2xs'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            ISPU KLHK
+          </button>
         </div>
+      </div>
 
-        {/* Action recommendations box */}
-        <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="flex items-start gap-3 rounded-2xl border border-slate-800/80 bg-slate-900/40 p-3.5">
-            <ShieldAlert className="h-5 w-5 text-sky-400 shrink-0 mt-0.5" />
-            <div>
-              <h4 className="text-xs font-bold text-slate-200">Penggunaan Masker</h4>
-              <p className="mt-0.5 text-xs text-slate-400 leading-snug">
-                {ispuInfo.maskRecommendation}
-              </p>
-            </div>
-          </div>
+      {/* Center: Semi-Circular Rainbow Gauge */}
+      <div className="relative z-10 -my-1 flex flex-col items-center justify-center">
+        <svg width="240" height="175" viewBox="0 0 240 175" className="overflow-visible">
+          <defs>
+            <linearGradient id="aqiRainbowArc" x1="0%" y1="50%" x2="100%" y2="50%">
+              <stop offset="0%" stopColor="#06B6D4" />
+              <stop offset="26%" stopColor="#10B981" />
+              <stop offset="52%" stopColor="#FACC15" />
+              <stop offset="76%" stopColor="#EF4444" />
+              <stop offset="100%" stopColor="#9333EA" />
+            </linearGradient>
+            <filter id="thumbGlow" x="-40%" y="-40%" width="180%" height="180%">
+              <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#0F172A" floodOpacity="0.25" />
+            </filter>
+          </defs>
 
-          <div className="flex items-start gap-3 rounded-2xl border border-slate-800/80 bg-slate-900/40 p-3.5">
-            <HeartPulse className="h-5 w-5 text-rose-400 shrink-0 mt-0.5" />
-            <div>
-              <h4 className="text-xs font-bold text-slate-200">Aktivitas Luar Ruang</h4>
-              <p className="mt-0.5 text-xs text-slate-400 leading-snug">
-                {ispuInfo.outdoorAdvice}
-              </p>
-            </div>
-          </div>
+          {/* Subtle background track */}
+          <path
+            d={arcPath}
+            fill="none"
+            stroke={isDark ? '#1E293B' : '#F1F5F9'}
+            strokeWidth="11"
+            strokeLinecap="round"
+          />
 
-          <div className="flex items-start gap-3 rounded-2xl border border-slate-800/80 bg-slate-900/40 p-3.5">
-            <AlertTriangle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
-            <div>
-              <h4 className="text-xs font-bold text-slate-200">Kelompok Rentan</h4>
-              <p className="mt-0.5 text-xs text-slate-400 leading-snug">
-                {ispuInfo.vulnerableGroupAdvice}
-              </p>
-            </div>
-          </div>
+          {/* Rainbow Gradient Arc */}
+          <path
+            d={arcPath}
+            fill="none"
+            stroke="url(#aqiRainbowArc)"
+            strokeWidth="9.5"
+            strokeLinecap="round"
+          />
+
+          {/* Circular Thumb Indicator on the Arc */}
+          <circle
+            cx={thumbX}
+            cy={thumbY}
+            r="8"
+            fill={isDark ? '#0F172A' : '#FFFFFF'}
+            stroke={ispuInfo.colorHex}
+            strokeWidth="4"
+            filter="url(#thumbGlow)"
+            className="transition-all duration-700"
+          />
+
+          {/* Center Score & Labels */}
+          <text
+            x={cx}
+            y={cy - 2}
+            textAnchor="middle"
+            className="fill-slate-900 dark:fill-white text-[40px] font-extrabold tracking-tight"
+          >
+            {displayScore}
+          </text>
+          <text
+            x={cx}
+            y={cy + 18}
+            textAnchor="middle"
+            className="fill-slate-500 dark:fill-slate-400 text-[11px] font-bold uppercase tracking-wider"
+          >
+            {standard === 'aqi' ? 'INDEKS AQI' : 'INDEKS ISPU'}
+          </text>
+        </svg>
+
+        {/* Bottom Status Pill inside Gauge (Clean Vector Dot + Bahasa Indonesia Category) */}
+        <div
+          className={`-mt-7 inline-flex items-center gap-1.5 rounded-full px-3.5 py-0.5 text-[11px] font-bold shadow-2xs ${ispuInfo.pillClass}`}
+        >
+          <StatusShieldBadgeIcon color={ispuInfo.colorHex} className="h-3.5 w-3.5" />
+          <span>Kategori: {ispuInfo.category}</span>
         </div>
+      </div>
+
+      {/* Bottom Micro Summary */}
+      <div className="relative z-10 mt-2 flex w-full items-center justify-between border-t border-slate-200/60 dark:border-slate-800 pt-2 text-[11px] text-slate-500 dark:text-slate-400">
+        <span>
+          Status Asap: <strong className="text-slate-800 dark:text-slate-200">{ispuInfo.hazeRisk}</strong>
+        </span>
+        <span>
+          PM2.5: <strong className="text-slate-800 dark:text-slate-200">{data.current.pm2_5.toFixed(2)} µg/m³</strong>
+        </span>
       </div>
     </div>
   );

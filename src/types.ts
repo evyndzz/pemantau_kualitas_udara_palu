@@ -12,23 +12,28 @@ export interface CityLocation {
 export interface CurrentPollutants {
   time: string;
   us_aqi: number;
+  european_aqi: number;
   pm2_5: number;
   pm10: number;
-  carbon_monoxide: number; // CO
-  nitrogen_dioxide: number; // NO2
-  sulphur_dioxide: number; // SO2
-  ozone: number; // O3
-  dust?: number;
-  aerosol_optical_depth?: number;
+  carbon_monoxide: number; // CO (µg/m³)
+  nitrogen_dioxide: number; // NO2 (µg/m³)
+  sulphur_dioxide: number; // SO2 (µg/m³)
+  ozone: number; // O3 (µg/m³)
+  dust: number;
+  aerosol_optical_depth: number;
+  uv_index: number;
 }
 
 export interface CurrentWeather {
   time: string;
   temperature: number;
+  apparentTemperature: number;
   humidity: number;
   windSpeed: number;
   windDirection: number;
+  windGusts: number;
   weatherCode: number;
+  surfacePressure: number;
 }
 
 export interface HourlyPoint {
@@ -36,8 +41,21 @@ export interface HourlyPoint {
   timestamp: number;
   pm2_5: number;
   pm10: number;
+  o3: number;
+  no2: number;
   us_aqi: number;
   ispu: number;
+  isForecast: boolean;
+}
+
+export interface DailyPoint {
+  date: string;
+  label: string;
+  pm2_5: number;
+  pm10: number;
+  us_aqi: number;
+  ispu: number;
+  isForecast: boolean;
 }
 
 export interface AirQualityResponse {
@@ -45,19 +63,26 @@ export interface AirQualityResponse {
   current: CurrentPollutants;
   weather: CurrentWeather;
   hourly: HourlyPoint[];
+  daily: DailyPoint[];
   lastUpdated: string;
+  dataSource: string;
 }
 
 export type ISPUCategory = 'BAIK' | 'SEDANG' | 'TIDAK SEHAT' | 'SANGAT TIDAK SEHAT' | 'BERBAHAYA';
 
 export interface ISPUInfo {
   score: number;
+  usAqiScore: number;
   category: ISPUCategory;
+  englishLabel: string;
+  emoji: string;
   colorName: string;
+  colorHex: string;
   bgClass: string;
   borderClass: string;
   textClass: string;
   badgeBg: string;
+  pillClass: string;
   ringClass: string;
   hazeRisk: 'Aman' | 'Waspada Asap' | 'Siaga Asap' | 'Darurat Asap';
   description: string;
@@ -70,8 +95,26 @@ export interface ISPUInfo {
 export interface CitySummary {
   city: CityLocation;
   ispu: number;
+  us_aqi: number;
   pm2_5: number;
+  pm10: number;
+  o3: number;
+  no2: number;
+  co: number;
   category: ISPUCategory;
+  englishLabel: string;
+  emoji: string;
   colorHex: string;
   statusText: string;
+}
+
+export type NavTab = 'home' | 'air-maps' | 'newsroom' | 'breathe-care';
+
+export interface PollutantVisibility {
+  pm2_5: boolean;
+  pm10: boolean;
+  o3: boolean;
+  no2: boolean;
+  co: boolean;
+  aqiColorArea: boolean;
 }

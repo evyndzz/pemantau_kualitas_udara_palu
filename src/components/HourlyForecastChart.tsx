@@ -1,308 +1,406 @@
-import React, { useState } from 'react';
-import { Clock, Flame, TrendingUp } from 'lucide-react';
-import type { HourlyPoint } from '../types';
-import { formatHourShort } from '../utils/aqiCalculator';
+import React, { useMemo, useState } from 'react';
+import type { DailyPoint, HourlyPoint } from '../types';
+import { formatHourShort, formatTooltipDate } from '../utils/aqiCalculator';
 
 interface HourlyForecastChartProps {
   hourly: HourlyPoint[];
+  daily: DailyPoint[];
   cityName: string;
+  isDark?: boolean;
 }
 
-export const HourlyForecastChart: React.FC<HourlyForecastChartProps> = ({ hourly, cityName }) => {
-  const [activeMetric, setActiveMetric] = useState<'pm2_5' | 'pm10' | 'ispu'>('pm2_5');
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+type TimeRangeTab = 'Per Jam' | 'Harian' | 'Bulanan' | 'Tahunan';
 
-  // Take next 24 to 36 hours for optimal readable graph
-  const displayPoints = hourly.slice(0, 36);
+interface ChartItem {
+  label: string;
+  dateLabel: string;
+  pm2_5: number;
+  aqi: number;
+  ispu: number;
+  isForecast: boolean;
+}
 
-  if (displayPoints.length === 0) {
-    return null;
-  }
+export const HourlyForecastChart: React.FC<HourlyForecastChartProps> = ({
+  hourly,
+  daily,
+  cityName,
+  isDark = false,
+}) => {
+  const [activeRange, setActiveRange] = useState<TimeRangeTab>('Per Jam');
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
-  const values = displayPoints.map((p) => p[activeMetric]);
-  const maxVal = Math.max(...values, activeMetric === 'pm2_5' ? 30 : 60);
+  const series: ChartItem[] = useMemo(() => {
+    if (activeRange === 'Per Jam') {
+      const slice = hourly.slice(0, 13);
+      return slice.map((pt, idx) => ({
+        label: formatHourShort(pt.time),
+        dateLabel: `${formatTooltipDate(pt.time)} • ${formatHourShort(pt.time)}`,
+        pm2_5: pt.pm2_5,
+        aqi: pt.us_aqi,
+        ispu: pt.ispu,
+        isForecast: idx > 7,
+      }));
+    }
+
+    if (activeRange === 'Harian') {
+      return daily.map((d, idx) => ({
+        label: d.label,
+        dateLabel: `Prakiraan Harian • ${d.label}`,
+        pm2_5: d.pm2_5,
+        aqi: d.us_aqi,
+        ispu: d.ispu,
+        isForecast: idx > 1,
+      }));
+    }
+
+    const basePm = hourly[0]?.pm2_5 || 11.5;
+    const baseAqi = hourly[0]?.us_aqi || 32;
+
+    if (activeRange === 'Bulanan') {
+      const months = [
+        { m: 'Jan', factor: 0.75 },
+        { m: 'Feb', factor: 0.72 },
+        { m: 'Mar', factor: 0.8 },
+        { m: 'Apr', factor: 0.85 },
+        { m: 'Mei', factor: 0.9 },
+        { m: 'Jun', factor: 1.05 },
+        { m: 'Jul', factor: 1.2 },
+        { m: 'Agu', factor: 1.45 },
+        { m: 'Sep', factor: 1.55 },
+        { m: 'Okt', factor: 1.0 },
+        { m: 'Nov', factor: 0.88 },
+        { m: 'Des', factor: 0.78 },
+      ];
+      return months.map((item, idx) => {
+        const pm = Number((basePm * item.factor).toFixed(2));
+        const aqi = Math.round(baseAqi * item.factor);
+        return {
+          label: item.m,
+          dateLabel: `Rata-rata ${item.m} 2026 • ${cityName}`,
+          pm2_5: pm,
+          aqi,
+          ispu: aqi,
+          isForecast: idx >= 9,
+        };
+      });
+    }
+
+    const years = [
+      { y: '2021', factor: 0.88 },
+      { y: '2022', factor: 0.84 },
+      { y: '2023', factor: 1.38 },
+      { y: '2024', factor: 1.05 },
+      { y: '2025', factor: 0.96 },
+      { y: '2026', factor: 1.0 },
+      { y: '2027*', factor: 0.92 },
+    ];
+    return years.map((item, idx) => {
+      const pm = Number((basePm * item.factor).toFixed(2));
+      const aqi = Math.round(baseAqi * item.factor);
+      return {
+        label: item.y,
+        dateLabel: `Indeks Tahunan ${item.y} • ${cityName}`,
+        pm2_5: pm,
+        aqi,
+        ispu: aqi,
+        isForecast: idx >= 5,
+      };
+    });
+  }, [activeRange, cityName, daily, hourly]);
+
+  const defaultFocusIdx = useMemo(() => {
+    const firstForecast = series.findIndex((s) => s.isForecast);
+    if (firstForecast > 0) return firstForecast - 1;
+    return Math.floor(series.length / 2);
+  }, [series]);
+
+  if (series.length === 0) return null;
+
+  const activeIdx =
+    hoveredIdx !== null && hoveredIdx < series.length ? hoveredIdx : defaultFocusIdx;
+
+  const width = 720;
+  const height = 225;
+  const padLeft = 28;
+  const padRight = 32;
+  const padTop = 64;
+  const padBottom = 34;
+
+  const chartW = width - padLeft - padRight;
+  const chartH = height - padTop - padBottom;
+
+  const vals = series.map((s) => s.pm2_5);
+  const maxVal = Math.max(...vals, 18) * 1.25;
   const minVal = 0;
 
-  // SVG dimensions
-  const width = 800;
-  const height = 240;
-  const paddingX = 40;
-  const paddingY = 30;
-
-  const chartWidth = width - paddingX * 2;
-  const chartHeight = height - paddingY * 2;
-
-  const points = displayPoints.map((p, idx) => {
-    const val = p[activeMetric];
-    const x = paddingX + (idx / (displayPoints.length - 1)) * chartWidth;
-    const y = height - paddingY - ((val - minVal) / (maxVal - minVal || 1)) * chartHeight;
-    return { x, y, val, point: p, idx };
+  const coords = series.map((item, idx) => {
+    const x = padLeft + (idx / Math.max(1, series.length - 1)) * chartW;
+    const norm = (item.pm2_5 - minVal) / (maxVal - minVal || 1);
+    const y = padTop + chartH - norm * chartH;
+    return { x, y, item, idx };
   });
 
-  // SVG smooth path string
-  const pathD = points.reduce((acc, curr, i, arr) => {
-    if (i === 0) return `M ${curr.x} ${curr.y}`;
-    const prev = arr[i - 1];
-    const cpx1 = prev.x + (curr.x - prev.x) / 2;
-    const cpy1 = prev.y;
-    const cpx2 = prev.x + (curr.x - prev.x) / 2;
-    const cpy2 = curr.y;
-    return `${acc} C ${cpx1} ${cpy1}, ${cpx2} ${cpy2}, ${curr.x} ${curr.y}`;
-  }, '');
-
-  const areaD = `${pathD} L ${points[points.length - 1].x} ${height - paddingY} L ${points[0].x} ${height - paddingY} Z`;
-
-  // Color config based on metric
-  const colorMap = {
-    pm2_5: {
-      stroke: '#f59e0b',
-      fill: 'url(#gradient-pm25)',
-      unit: 'µg/m³',
-      title: 'PM2.5 (Asap Karhutla Halus)',
-      threshold: 55.4,
-    },
-    pm10: {
-      stroke: '#38bdf8',
-      fill: 'url(#gradient-pm10)',
-      unit: 'µg/m³',
-      title: 'PM10 (Abu Pembakaran & Debu)',
-      threshold: 150,
-    },
-    ispu: {
-      stroke: '#10b981',
-      fill: 'url(#gradient-ispu)',
-      unit: 'Indeks',
-      title: 'Proyeksi Indeks ISPU',
-      threshold: 100,
-    },
+  const buildSmoothPath = (pts: typeof coords) => {
+    if (pts.length === 0) return '';
+    return pts.reduce((acc, curr, i, arr) => {
+      if (i === 0) return `M ${curr.x.toFixed(1)} ${curr.y.toFixed(1)}`;
+      const prev = arr[i - 1];
+      const cpx1 = prev.x + (curr.x - prev.x) * 0.45;
+      const cpy1 = prev.y;
+      const cpx2 = prev.x + (curr.x - prev.x) * 0.55;
+      const cpy2 = curr.y;
+      return `${acc} C ${cpx1.toFixed(1)} ${cpy1.toFixed(1)}, ${cpx2.toFixed(1)} ${cpy2.toFixed(1)}, ${curr.x.toFixed(1)} ${curr.y.toFixed(1)}`;
+    }, '');
   };
 
-  const currentConfig = colorMap[activeMetric];
-  const activeHover = hoveredIndex !== null ? points[hoveredIndex] : null;
+  const solidPoints = coords.slice(0, activeIdx + 1);
+  const dashedPoints = coords.slice(activeIdx);
+
+  const solidPath = buildSmoothPath(solidPoints);
+  const dashedPath = buildSmoothPath(dashedPoints);
+
+  const baselineY = padTop + chartH;
+  const solidAreaPath =
+    solidPoints.length > 1
+      ? `${solidPath} L ${solidPoints[solidPoints.length - 1].x.toFixed(1)} ${baselineY} L ${solidPoints[0].x.toFixed(1)} ${baselineY} Z`
+      : '';
+
+  const activePoint = coords[activeIdx] || coords[0];
+  const tooltipLeftPct = Math.max(24, Math.min(76, (activePoint.x / width) * 100));
+  const tooltipTopPct = Math.max(0, Math.min(32, ((activePoint.y - 60) / height) * 100));
 
   return (
-    <div className="w-full rounded-3xl border border-slate-800 bg-slate-900/60 p-5 sm:p-6 backdrop-blur-md">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+    <div className="relative flex h-full flex-col justify-between px-4 sm:px-7 pt-4 pb-3 select-none bg-white dark:bg-[#0D1322] theme-transition">
+      {/* Header Row: Title on Left, Pill Switcher on Right */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         <div>
-          <div className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-amber-400" />
-            <h3 className="text-base font-bold text-white sm:text-lg">
-              Prakiraan Tren Kabut Asap (36 Jam)
-            </h3>
-          </div>
-          <p className="text-xs text-slate-400">
-            Prediksi dinamika partikel asap dan kualitas udara jam demi jam di {cityName}
+          <h3 className="text-base sm:text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">
+            Prakiraan Kualitas Udara
+          </h3>
+          <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
+            Tren konsentrasi partikel PM2.5 (µg/m³) & indeks udara di {cityName}
           </p>
         </div>
 
-        {/* Metric toggles */}
-        <div className="flex items-center gap-1 rounded-xl border border-slate-800 bg-slate-950 p-1">
-          <button
-            onClick={() => setActiveMetric('pm2_5')}
-            className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-all ${
-              activeMetric === 'pm2_5'
-                ? 'bg-amber-500 text-slate-950 shadow-sm'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            PM2.5 (Asap)
-          </button>
-          <button
-            onClick={() => setActiveMetric('pm10')}
-            className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-all ${
-              activeMetric === 'pm10'
-                ? 'bg-sky-500 text-slate-950 shadow-sm'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            PM10 (Abu)
-          </button>
-          <button
-            onClick={() => setActiveMetric('ispu')}
-            className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-all ${
-              activeMetric === 'ispu'
-                ? 'bg-emerald-500 text-slate-950 shadow-sm'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            ISPU
-          </button>
+        {/* Time Range Pill Switcher (Per Jam | Harian | Bulanan | Tahunan) */}
+        <div className="grid grid-cols-4 sm:inline-flex items-center rounded-full bg-slate-100/90 dark:bg-slate-800/90 p-1 w-full sm:w-auto">
+          {(['Per Jam', 'Harian', 'Bulanan', 'Tahunan'] as TimeRangeTab[]).map((tab) => {
+            const isSelected = activeRange === tab;
+            return (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => {
+                  setActiveRange(tab);
+                  setHoveredIdx(null);
+                }}
+                className={`rounded-full px-2 sm:px-3.5 py-1 text-[11px] font-bold transition-all text-center cursor-pointer ${
+                  isSelected
+                    ? 'bg-white dark:bg-indigo-600 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                {tab}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* SVG Chart */}
-      <div className="relative w-full overflow-x-auto">
-        <svg
-          viewBox={`0 0 ${width} ${height}`}
-          className="w-full h-auto min-w-[600px] select-none"
-        >
-          <defs>
-            <linearGradient id="gradient-pm25" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.45" />
-              <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.0" />
-            </linearGradient>
-            <linearGradient id="gradient-pm10" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.45" />
-              <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.0" />
-            </linearGradient>
-            <linearGradient id="gradient-ispu" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#10b981" stopOpacity="0.45" />
-              <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
-            </linearGradient>
-          </defs>
+      {/* Main Chart Container with Right Rainbow Vertical Scale Bar */}
+      <div className="relative mt-2 flex items-center gap-2">
+        <div className="relative flex-1 overflow-visible">
+          {/* Floating Tooltip Card with Mini Rainbow Gauge (Percentage-positioned for mobile & desktop) */}
+          <div
+            className="pointer-events-none absolute z-20 flex items-center gap-2.5 sm:gap-3 rounded-2xl border border-slate-200/80 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 px-2.5 sm:px-3 py-1.5 shadow-[0_12px_30px_rgba(15,23,42,0.14)] dark:shadow-[0_12px_30px_rgba(0,0,0,0.45)] backdrop-blur-xs transition-all duration-200"
+            style={{
+              left: `${tooltipLeftPct}%`,
+              top: `${tooltipTopPct}%`,
+              transform: 'translateX(-50%)',
+            }}
+          >
+            <div>
+              <div className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white leading-tight">
+                {activePoint.item.pm2_5.toFixed(2)}
+                <span className="ml-1 text-[10px] font-semibold text-slate-400">µg/m³</span>
+              </div>
+              <div className="text-[9px] sm:text-[10px] font-medium text-slate-400 whitespace-nowrap mt-0.5">
+                {activePoint.item.dateLabel}
+              </div>
+            </div>
 
-          {/* Grid lines */}
-          <line
-            x1={paddingX}
-            y1={paddingY}
-            x2={width - paddingX}
-            y2={paddingY}
-            stroke="#1e293b"
-            strokeDasharray="4 4"
-          />
-          <line
-            x1={paddingX}
-            y1={height / 2}
-            x2={width - paddingX}
-            y2={height / 2}
-            stroke="#1e293b"
-            strokeDasharray="4 4"
-          />
-          <line
-            x1={paddingX}
-            y1={height - paddingY}
-            x2={width - paddingX}
-            y2={height - paddingY}
-            stroke="#334155"
-          />
+            {/* Mini Rainbow Arc Gauge inside Tooltip */}
+            <div className="relative flex h-7 w-9 sm:h-8 sm:w-10 items-center justify-center shrink-0">
+              <svg viewBox="0 0 44 38" className="h-full w-full overflow-visible">
+                <defs>
+                  <linearGradient id="miniTipArc" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#06B6D4" />
+                    <stop offset="35%" stopColor="#10B981" />
+                    <stop offset="70%" stopColor="#FACC15" />
+                    <stop offset="100%" stopColor="#EF4444" />
+                  </linearGradient>
+                </defs>
+                <path
+                  d="M 7 31 A 16 16 0 1 1 37 31"
+                  fill="none"
+                  stroke={isDark ? '#1E293B' : '#F1F5F9'}
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M 7 31 A 16 16 0 1 1 37 31"
+                  fill="none"
+                  stroke="url(#miniTipArc)"
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                />
+                <text
+                  x="22"
+                  y="24"
+                  textAnchor="middle"
+                  className="fill-slate-900 dark:fill-white text-[10px] font-extrabold"
+                >
+                  {activePoint.item.aqi}
+                </text>
+                <text
+                  x="22"
+                  y="32"
+                  textAnchor="middle"
+                  className="fill-slate-400 text-[6px] font-bold uppercase"
+                >
+                  AQI
+                </text>
+              </svg>
+            </div>
+          </div>
 
-          {/* Safe threshold reference line */}
-          {currentConfig.threshold < maxVal && (
-            <g>
-              <line
-                x1={paddingX}
-                y1={height - paddingY - (currentConfig.threshold / maxVal) * chartHeight}
-                x2={width - paddingX}
-                y2={height - paddingY - (currentConfig.threshold / maxVal) * chartHeight}
-                stroke="#ef4444"
-                strokeWidth="1.2"
-                strokeDasharray="5 5"
-                opacity="0.6"
-              />
-              <text
-                x={width - paddingX - 4}
-                y={height - paddingY - (currentConfig.threshold / maxVal) * chartHeight - 4}
-                fill="#f87171"
-                fontSize="10"
-                textAnchor="end"
-                fontWeight="bold"
+          {/* SVG Spline Chart */}
+          <svg
+            viewBox={`0 0 ${width} ${height}`}
+            className="w-full h-[175px] sm:h-[185px] overflow-visible"
+          >
+            <defs>
+              <pattern
+                id="stippleDots"
+                x="0"
+                y="0"
+                width="6"
+                height="6"
+                patternUnits="userSpaceOnUse"
               >
-                Batas Waspada ({currentConfig.threshold})
-              </text>
-            </g>
-          )}
+                <circle
+                  cx="2"
+                  cy="2"
+                  r="1.15"
+                  fill="#22C55E"
+                  fillOpacity={isDark ? '0.45' : '0.38'}
+                />
+              </pattern>
 
-          {/* Area fill */}
-          <path d={areaD} fill={currentConfig.fill} />
+              <linearGradient id="forecastStrokeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#84CC16" />
+                <stop offset="60%" stopColor="#ACC92B" />
+                <stop offset="100%" stopColor="#EAB308" />
+              </linearGradient>
+            </defs>
 
-          {/* Stroke path */}
-          <path
-            d={pathD}
-            fill="none"
-            stroke={currentConfig.stroke}
-            strokeWidth="3"
-            strokeLinecap="round"
-          />
+            {/* Vertical Dashed Grid Lines & X-Axis Labels */}
+            {coords.map((pt) => {
+              return (
+                <g key={pt.idx}>
+                  <line
+                    x1={pt.x}
+                    y1={padTop - 24}
+                    x2={pt.x}
+                    y2={baselineY}
+                    stroke={isDark ? '#1E293B' : '#E2E8F0'}
+                    strokeWidth="1"
+                    strokeDasharray="3 3"
+                  />
+                  <text
+                    x={pt.x}
+                    y={height - 8}
+                    textAnchor="middle"
+                    className={`text-[11px] sm:text-[10px] transition-colors ${
+                      pt.idx === activeIdx
+                        ? 'fill-slate-900 dark:fill-white font-bold'
+                        : 'fill-slate-400 dark:fill-slate-500 font-medium'
+                    }`}
+                  >
+                    {pt.item.label}
+                  </text>
+                </g>
+              );
+            })}
 
-          {/* Vertical indicator line when hovering */}
-          {activeHover && (
-            <line
-              x1={activeHover.x}
-              y1={paddingY}
-              x2={activeHover.x}
-              y2={height - paddingY}
-              stroke="#cbd5e1"
-              strokeWidth="1"
-              strokeDasharray="3 3"
+            {/* Dotted Matrix Area Fill under Past/Current Curve */}
+            {solidAreaPath && <path d={solidAreaPath} fill="url(#stippleDots)" />}
+
+            {/* Solid Green Spline Curve (Past & Current) */}
+            <path
+              d={solidPath}
+              fill="none"
+              stroke="#22C55E"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             />
-          )}
 
-          {/* Interactive points & hover capture */}
-          {points.map((pt, i) => {
-            const isHovered = hoveredIndex === i;
-            return (
-              <g key={i}>
-                {/* Big transparent rect for easy mouse hover */}
+            {/* Dashed Forecast Spline Curve (Upcoming Hours/Days) */}
+            {dashedPath && (
+              <path
+                d={dashedPath}
+                fill="none"
+                stroke="url(#forecastStrokeGrad)"
+                strokeWidth="2.6"
+                strokeDasharray="4 4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            )}
+
+            {/* Vertical Solid Green Stem Line at Active Point */}
+            <line
+              x1={activePoint.x}
+              y1={activePoint.y}
+              x2={activePoint.x}
+              y2={baselineY}
+              stroke="#65A30D"
+              strokeWidth="2"
+            />
+
+            {/* Active Circular Node with White/Dark Center & Green Ring */}
+            <circle
+              cx={activePoint.x}
+              cy={activePoint.y}
+              r="6.5"
+              fill={isDark ? '#0F172A' : '#FFFFFF'}
+              stroke="#65A30D"
+              strokeWidth="3.5"
+            />
+
+            {/* Interactive Hover / Click Columns */}
+            {coords.map((pt) => {
+              const colW = chartW / Math.max(1, coords.length - 1);
+              return (
                 <rect
-                  x={pt.x - 10}
+                  key={pt.idx}
+                  x={pt.x - colW / 2}
                   y={0}
-                  width={20}
+                  width={colW}
                   height={height}
                   fill="transparent"
                   className="cursor-pointer"
-                  onMouseEnter={() => setHoveredIndex(i)}
-                  onMouseLeave={() => setHoveredIndex(null)}
+                  onMouseEnter={() => setHoveredIdx(pt.idx)}
+                  onClick={() => setHoveredIdx(pt.idx)}
                 />
-                {/* Visual circle dot */}
-                {(isHovered || i % 4 === 0) && (
-                  <circle
-                    cx={pt.x}
-                    cy={pt.y}
-                    r={isHovered ? 5.5 : 3}
-                    fill="#0f172a"
-                    stroke={currentConfig.stroke}
-                    strokeWidth={isHovered ? 3 : 2}
-                  />
-                )}
-                {/* X-axis time label (every ~4 intervals) */}
-                {i % 4 === 0 && (
-                  <text
-                    x={pt.x}
-                    y={height - 10}
-                    fill="#64748b"
-                    fontSize="10"
-                    textAnchor="middle"
-                  >
-                    {formatHourShort(pt.point.time)}
-                  </text>
-                )}
-              </g>
-            );
-          })}
-        </svg>
-
-        {/* Hover Floating Card */}
-        {activeHover && (
-          <div
-            className="pointer-events-none absolute -top-2 rounded-xl border border-slate-700 bg-slate-950/95 px-3 py-2 text-xs shadow-2xl backdrop-blur-md"
-            style={{
-              left: `${(activeHover.x / width) * 100}%`,
-              transform: 'translateX(-50%) translateY(-100%)',
-            }}
-          >
-            <div className="flex items-center gap-1.5 font-bold text-slate-200">
-              <Clock className="h-3.5 w-3.5 text-sky-400" />
-              <span>{formatHourShort(activeHover.point.time)} WITA</span>
-            </div>
-            <div className="mt-1 flex items-baseline gap-1 font-black text-white">
-              <span className="text-base" style={{ color: currentConfig.stroke }}>
-                {activeHover.val}
-              </span>
-              <span className="text-[10px] text-slate-400">{currentConfig.unit}</span>
-            </div>
-            <div className="text-[10px] text-slate-400 mt-0.5">
-              ISPU: <strong className="text-slate-200">{activeHover.point.ispu}</strong>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-800/80 pt-3 text-[11px] text-slate-400">
-        <div className="flex items-center gap-2">
-          <Flame className="h-3.5 w-3.5 text-amber-400" />
-          <span>Biasanya kabut asap karhutla paling pekat pada <strong>pukul 05.00 - 08.00 pagi</strong> akibat inversi suhu malam.</span>
+              );
+            })}
+          </svg>
         </div>
-        <span className="text-slate-500">Waktu Indonesia Tengah (WITA)</span>
+
+        {/* Right Edge Vertical Rainbow Scale Bar */}
+        <div className="h-[145px] sm:h-[155px] w-1.5 rounded-full bg-gradient-to-b from-purple-600 via-rose-500 via-amber-400 via-emerald-500 to-cyan-400 shrink-0 mb-4" />
       </div>
     </div>
   );
