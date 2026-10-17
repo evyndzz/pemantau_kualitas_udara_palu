@@ -179,12 +179,12 @@ export const AQIHeroCard: React.FC<AQIHeroCardProps> = ({ data, ispuInfo, isDark
         </div>
       </div>
 
-      {/* Bottom Micro Summary */}
-      <div className="relative z-10 mt-2 flex w-full items-center justify-between border-t border-slate-200/60 dark:border-slate-800 pt-2 text-[11px] text-slate-500 dark:text-slate-400">
-        <span>
-          Status Asap: <strong className="text-slate-800 dark:text-slate-200">{ispuInfo.hazeRisk}</strong>
+      {/* Bottom Micro Summary with Official BMKG Weather */}
+      <div className="relative z-10 mt-2 flex w-full items-center justify-between border-t border-slate-200/60 dark:border-slate-800 pt-2 text-[11px] text-slate-500 dark:text-slate-400 gap-2">
+        <span className="truncate">
+          BMKG: <strong className="text-slate-800 dark:text-slate-200">{data.weather.weatherDesc} • {data.weather.temperature}°C</strong>
         </span>
-        <span>
+        <span className="shrink-0">
           PM2.5: <strong className="text-slate-800 dark:text-slate-200">{data.current.pm2_5.toFixed(2)} µg/m³</strong>
         </span>
       </div>

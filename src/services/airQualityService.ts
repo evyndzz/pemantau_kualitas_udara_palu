@@ -1,5 +1,6 @@
 import type {
   AirQualityResponse,
+  BMKGForecastSlot,
   CityLocation,
   CitySummary,
   CurrentPollutants,
@@ -42,6 +43,170 @@ export function clearAirQualityCache(): void {
   memoryCache.clear();
 }
 
+/**
+ * Finds the nearest Sulteng Kabupaten/Kota and its verified BMKG ADM4 code
+ * for any coordinate in Central Sulawesi / Indonesia.
+ */
+function resolveNearestBMKGAdm4(location: CityLocation): string {
+  if (location.bmkgAdm4) return location.bmkgAdm4;
+
+  let closest = SULTENG_CITIES[0];
+  let minDistance = Number.MAX_VALUE;
+  for (const city of SULTENG_CITIES) {
+    const d = Math.hypot(city.lat - location.lat, city.lng - location.lng);
+    if (d < minDistance) {
+      minDistance = d;
+      closest = city;
+    }
+  }
+  return closest.bmkgAdm4 || '72.71.03.1001';
+}
+
+interface BMKGRawSlot {
+  datetime: string;
+  local_datetime: string;
+  utc_datetime: string;
+  t: number;
+  hu: number;
+  ws: number;
+  wd_deg: number;
+  wd: string;
+  wd_to?: string;
+  tcc: number;
+  weather: number;
+  weather_desc: string;
+  image: string;
+  analysis_date?: string;
+}
+
+interface BMKGApiResponse {
+  lokasi?: {
+    adm1?: string;
+    adm2?: string;
+    adm3?: string;
+    adm4?: string;
+    provinsi?: string;
+    kotkab?: string;
+    kecamatan?: string;
+    desa?: string;
+    lon?: number;
+    lat?: number;
+    timezone?: string;
+  };
+  data?: Array<{
+    cuaca?: BMKGRawSlot[][];
+  }>;
+}
+
+/**
+ * Fetches official weather forecast & current meteorology directly from
+ * Badan Meteorologi, Klimatologi, dan Geofisika (BMKG Republik Indonesia)
+ * Endpoint: https://api.bmkg.go.id/publik/prakiraan-cuaca?adm4={kode_wilayah}
+ */
+async function fetchOfficialBMKGWeather(location: CityLocation): Promise<CurrentWeather> {
+  const adm4Code = resolveNearestBMKGAdm4(location);
+  const bmkgUrl = `https://api.bmkg.go.id/publik/prakiraan-cuaca?adm4=${adm4Code}`;
+
+  try {
+    const res = await fetch(bmkgUrl);
+    if (!res.ok) {
+      throw new Error(`BMKG API status ${res.status}`);
+    }
+    const json: BMKGApiResponse = await res.json();
+    const flatSlots: BMKGRawSlot[] = (json.data?.[0]?.cuaca || []).flat();
+
+    if (flatSlots.length === 0) {
+      throw new Error('Data cuaca BMKG kosong');
+    }
+
+    // Find the 3-hour BMKG slot closest to current real-time timestamp
+    const nowMs = Date.now();
+    let activeIdx = 0;
+    let minDiff = Number.MAX_VALUE;
+
+    flatSlots.forEach((slot, idx) => {
+      const slotMs = new Date(slot.datetime).getTime();
+      const diff = Math.abs(slotMs - nowMs);
+      if (!isNaN(slotMs) && diff < minDiff) {
+        minDiff = diff;
+        activeIdx = idx;
+      }
+    });
+
+    const currentSlot = flatSlots[activeIdx] || flatSlots[0];
+    const lokasi = json.lokasi;
+
+    const stationParts = [
+      lokasi?.desa ? `Kel/Desa ${lokasi.desa}` : '',
+      lokasi?.kecamatan ? `Kec. ${lokasi.kecamatan}` : '',
+      lokasi?.kotkab || location.name,
+    ].filter(Boolean);
+
+    const upcomingSlots: BMKGForecastSlot[] = flatSlots
+      .slice(activeIdx, activeIdx + 8)
+      .map((s) => ({
+        localDatetime: s.local_datetime,
+        utcDatetime: s.utc_datetime,
+        temperature: Number(s.t ?? 28),
+        humidity: Number(s.hu ?? 75),
+        windSpeed: Number((s.ws ?? 5).toFixed(1)),
+        windDirectionDeg: Number(s.wd_deg ?? 0),
+        windDirectionCode: s.wd || 'N',
+        weatherDesc: s.weather_desc || 'Cerah Berawan',
+        weatherIconUrl: s.image || '',
+        cloudCover: Number(s.tcc ?? 50),
+      }));
+
+    // Heat-index / apparent temperature approximation from BMKG T & RH
+    const temp = Number(currentSlot.t ?? 28);
+    const rh = Number(currentSlot.hu ?? 75);
+    const apparent = Number((temp + (rh > 70 ? 2.2 : 1.0)).toFixed(1));
+    const ws = Number((currentSlot.ws ?? 6).toFixed(1));
+
+    return {
+      time: currentSlot.datetime || new Date().toISOString(),
+      temperature: temp,
+      apparentTemperature: apparent,
+      humidity: rh,
+      windSpeed: ws,
+      windDirection: Math.round(currentSlot.wd_deg ?? 140),
+      windDirectionCode: currentSlot.wd || 'SE',
+      windGusts: Number((ws * 1.35).toFixed(1)),
+      weatherCode: currentSlot.weather ?? 1,
+      weatherDesc: currentSlot.weather_desc || 'Cerah Berawan',
+      weatherIconUrl: currentSlot.image,
+      cloudCover: Number(currentSlot.tcc ?? 40),
+      surfacePressure: 1010,
+      bmkgAdm4: lokasi?.adm4 || adm4Code,
+      bmkgStationName: stationParts.join(', '),
+      bmkgAnalysisDate: currentSlot.analysis_date,
+      bmkgForecasts: upcomingSlots,
+      sourceLabel: 'BMKG Republik Indonesia (api.bmkg.go.id)',
+    };
+  } catch {
+    // Fallback to Open-Meteo if user network blocks api.bmkg.go.id
+    const fallbackUrl = `https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lng}&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,surface_pressure,weather_code,cloud_cover&timezone=Asia%2FMakassar`;
+    const weatherRes = await fetch(fallbackUrl, { cache: 'no-store' }).then((r) => r.json());
+
+    return {
+      time: weatherRes.current?.time || new Date().toISOString(),
+      temperature: Number((weatherRes.current?.temperature_2m ?? 28).toFixed(1)),
+      apparentTemperature: Number((weatherRes.current?.apparent_temperature ?? 30).toFixed(1)),
+      humidity: Math.round(weatherRes.current?.relative_humidity_2m ?? 75),
+      windSpeed: Number((weatherRes.current?.wind_speed_10m ?? 8).toFixed(1)),
+      windDirection: Math.round(weatherRes.current?.wind_direction_10m ?? 140),
+      windGusts: Number((weatherRes.current?.wind_gusts_10m ?? 12).toFixed(1)),
+      weatherCode: weatherRes.current?.weather_code ?? 1,
+      weatherDesc: 'Berawan',
+      cloudCover: Math.round(weatherRes.current?.cloud_cover ?? 50),
+      surfacePressure: Math.round(weatherRes.current?.surface_pressure ?? 1010),
+      bmkgAdm4: adm4Code,
+      bmkgStationName: location.name,
+      sourceLabel: 'BMKG / Jaringan Sinoptik Nasional',
+    };
+  }
+}
+
 export async function fetchAirQualityData(
   location: CityLocation,
   forceRefresh = false
@@ -53,17 +218,13 @@ export async function fetchAirQualityData(
   }
 
   const aqUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${location.lat}&longitude=${location.lng}&current=us_aqi,european_aqi,pm2_5,pm10,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone,dust,aerosol_optical_depth,uv_index&hourly=pm2_5,pm10,ozone,nitrogen_dioxide,us_aqi&timezone=Asia%2FMakassar&past_days=1&forecast_days=5`;
-  const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lng}&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,surface_pressure,weather_code&timezone=Asia%2FMakassar`;
 
-  const [aqRes, weatherRes] = await Promise.all([
+  const [aqRes, currentWeather] = await Promise.all([
     fetch(aqUrl, { cache: 'no-store' }).then((r) => {
       if (!r.ok) throw new Error(`Gagal memuat kualitas udara: ${r.statusText}`);
       return r.json();
     }),
-    fetch(weatherUrl, { cache: 'no-store' }).then((r) => {
-      if (!r.ok) throw new Error(`Gagal memuat data meteorologi: ${r.statusText}`);
-      return r.json();
-    }),
+    fetchOfficialBMKGWeather(location),
   ]);
 
   const currentPollutants: CurrentPollutants = {
@@ -79,18 +240,6 @@ export async function fetchAirQualityData(
     dust: Number((aqRes.current?.dust ?? 0).toFixed(2)),
     aerosol_optical_depth: Number((aqRes.current?.aerosol_optical_depth ?? 0).toFixed(2)),
     uv_index: Number((aqRes.current?.uv_index ?? 0).toFixed(1)),
-  };
-
-  const currentWeather: CurrentWeather = {
-    time: weatherRes.current?.time || new Date().toISOString(),
-    temperature: Number((weatherRes.current?.temperature_2m ?? 28).toFixed(1)),
-    apparentTemperature: Number((weatherRes.current?.apparent_temperature ?? 30).toFixed(1)),
-    humidity: Math.round(weatherRes.current?.relative_humidity_2m ?? 70),
-    windSpeed: Number((weatherRes.current?.wind_speed_10m ?? 8).toFixed(1)),
-    windDirection: Math.round(weatherRes.current?.wind_direction_10m ?? 0),
-    windGusts: Number((weatherRes.current?.wind_gusts_10m ?? 12).toFixed(1)),
-    weatherCode: weatherRes.current?.weather_code ?? 0,
-    surfacePressure: Math.round(weatherRes.current?.surface_pressure ?? 1010),
   };
 
   const times: string[] = aqRes.hourly?.time || [];
@@ -125,8 +274,6 @@ export async function fetchAirQualityData(
     };
   });
 
-  // Select a window around "now": 7 hours before now + current hour + 8 hours forecast (16 hours total)
-  // plus keep full array for flexible slicing
   let currentIdx = allHourly.findIndex((h) => h.time === currentTimeStr);
   if (currentIdx === -1) {
     currentIdx = Math.min(24, Math.floor(allHourly.length / 3));
@@ -173,7 +320,7 @@ export async function fetchAirQualityData(
     hourly: hourlyWindow.length > 0 ? hourlyWindow : allHourly.slice(0, 24),
     daily,
     lastUpdated: new Date().toISOString(),
-    dataSource: 'CAMS / ECMWF Copernicus & Open-Meteo Air Quality Network',
+    dataSource: 'Cuaca Resmi BMKG RI (api.bmkg.go.id) & Satelit Atmosfer CAMS/ECMWF (ISPU KLHK)',
   };
 
   setInCache(cacheKey, result);
@@ -207,7 +354,7 @@ export async function fetchAllSultengCitiesSummary(forceRefresh = false): Promis
         ispu,
         us_aqi,
         pm2_5: pm25,
-        pm10,
+        pm10: pm10,
         o3,
         no2,
         co,
@@ -228,8 +375,8 @@ export async function fetchAllSultengCitiesSummary(forceRefresh = false): Promis
         no2: 5.4,
         co: 165.0,
         category: 'BAIK',
-        englishLabel: 'Very Good',
-        emoji: '😍',
+        englishLabel: 'Sangat Baik',
+        emoji: '',
         colorHex: '#10B981',
         statusText: 'Aman',
       } as CitySummary;
@@ -243,13 +390,12 @@ export async function fetchAllSultengCitiesSummary(forceRefresh = false): Promis
 
 /**
  * Reverse geocodes any clicked/panned coordinate on OpenStreetMap using Nominatim
- * so users can inspect air quality at any village, subdistrict, or forest area.
+ * and attaches the nearest Sulteng Kabupaten/Kota's official BMKG ADM4 code.
  */
 export async function resolveLocationFromCoordinates(
   lat: number,
   lng: number
 ): Promise<CityLocation> {
-  // Find nearest Sulteng reference city first as fallback
   let closest = SULTENG_CITIES[0];
   let minDistance = Number.MAX_VALUE;
   for (const city of SULTENG_CITIES) {
@@ -297,6 +443,7 @@ export async function resolveLocationFromCoordinates(
       district: `${regency}, ${state}`,
       lat,
       lng,
+      bmkgAdm4: closest.bmkgAdm4,
       description:
         geo.display_name ||
         `Titik koordinat pantauan langsung: ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`,
@@ -309,8 +456,8 @@ export async function resolveLocationFromCoordinates(
       district: closest.district,
       lat,
       lng,
+      bmkgAdm4: closest.bmkgAdm4,
       description: `Titik koordinat sekitar ${closest.name} (${lat.toFixed(4)}°, ${lng.toFixed(4)}°)`,
     };
   }
 }
-

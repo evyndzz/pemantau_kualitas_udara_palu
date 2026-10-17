@@ -397,7 +397,7 @@ export function App() {
                           </span>
                         </div>
                         <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                          PM2.5: <strong className="text-slate-700 dark:text-slate-200">{data.current.pm2_5.toFixed(2)} µg/m³</strong> • ISPU {ispuInfo.score}
+                          PM2.5: <strong className="text-slate-700 dark:text-slate-200">{data.current.pm2_5.toFixed(2)} µg/m³</strong> • BMKG: {data.weather.weatherDesc} ({data.weather.temperature}°C)
                         </p>
                       </div>
                     </button>

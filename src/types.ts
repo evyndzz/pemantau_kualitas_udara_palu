@@ -6,6 +6,7 @@ export interface CityLocation {
   lat: number;
   lng: number;
   description: string;
+  bmkgAdm4?: string;
   isProvincialCapital?: boolean;
 }
 
@@ -24,6 +25,19 @@ export interface CurrentPollutants {
   uv_index: number;
 }
 
+export interface BMKGForecastSlot {
+  localDatetime: string;
+  utcDatetime: string;
+  temperature: number;
+  humidity: number;
+  windSpeed: number;
+  windDirectionDeg: number;
+  windDirectionCode: string;
+  weatherDesc: string;
+  weatherIconUrl: string;
+  cloudCover: number;
+}
+
 export interface CurrentWeather {
   time: string;
   temperature: number;
@@ -31,9 +45,18 @@ export interface CurrentWeather {
   humidity: number;
   windSpeed: number;
   windDirection: number;
+  windDirectionCode?: string;
   windGusts: number;
   weatherCode: number;
+  weatherDesc: string;
+  weatherIconUrl?: string;
+  cloudCover?: number;
   surfacePressure: number;
+  bmkgAdm4?: string;
+  bmkgStationName?: string;
+  bmkgAnalysisDate?: string;
+  bmkgForecasts?: BMKGForecastSlot[];
+  sourceLabel: string;
 }
 
 export interface HourlyPoint {
