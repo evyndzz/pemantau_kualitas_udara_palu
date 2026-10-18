@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Bell, MapPin, Menu, Search } from 'lucide-react';
 import type { CityLocation, CitySummary, ISPUInfo, NavTab } from '../types';
+import appLogo from '../assets/icon.jpeg';
 import {
-  BrandAirIcon,
   MoonModeIcon,
   NavHealthShieldIcon,
   StatusShieldBadgeIcon,
@@ -82,8 +82,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={() => onSelectTab('air-maps')}
             className="flex lg:hidden items-center gap-2 text-left min-w-0 cursor-pointer"
           >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-50/90 dark:bg-indigo-950/60 border border-indigo-100/80 dark:border-indigo-800/50">
-              <BrandAirIcon className="h-5 w-5" />
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl overflow-hidden border border-slate-200/80 dark:border-slate-800 shadow-xs">
+              <img src={appLogo} alt="Logo UdaraSulteng" className="h-full w-full object-cover" />
             </div>
             <div className="flex flex-col min-w-0">
               <span className="text-sm font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight truncate">

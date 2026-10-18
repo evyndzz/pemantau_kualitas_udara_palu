@@ -10,17 +10,20 @@ import { AirQualityMap } from './components/AirQualityMap';
 import { HourlyForecastChart } from './components/HourlyForecastChart';
 import { EmergencyContacts } from './components/EmergencyContacts';
 import { Footer } from './components/Footer';
+import { CitySearchModal } from './components/CitySearchModal';
 import { DEFAULT_CITY, SULTENG_CITIES } from './constants/cities';
 import type { AirQualityResponse, CityLocation, CitySummary, NavTab } from './types';
 import {
   fetchAirQualityData,
   fetchAllSultengCitiesSummary,
   resolveLocationFromCoordinates,
+  syncCityInSummaryCache,
 } from './services/airQualityService';
 import {
   calculatePM10ISPU,
   calculatePM25ISPU,
   formatWITA,
+  getISPUColorHex,
   getISPUDetails,
 } from './utils/aqiCalculator';
 import {
@@ -49,6 +52,7 @@ export function App() {
   const [geoLoading, setGeoLoading] = useState<boolean>(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [healthModalOpen, setHealthModalOpen] = useState<boolean>(false);
+  const [searchModalOpen, setSearchModalOpen] = useState<boolean>(false);
 
   // Desktop Sidebar Collapsed State & Mobile Hamburger Drawer State
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
@@ -136,6 +140,34 @@ export function App() {
       try {
         const result = await fetchAirQualityData(city, forceRefresh);
         setData(result);
+
+        // Keep allSummaries in exact synchronization with active city's live data
+        const ispu = Math.max(
+          calculatePM25ISPU(result.current.pm2_5),
+          calculatePM10ISPU(result.current.pm10)
+        );
+        const details = getISPUDetails(ispu, result.current.us_aqi);
+        const updatedSummary: CitySummary = {
+          city: result.location,
+          ispu,
+          us_aqi: result.current.us_aqi,
+          pm2_5: result.current.pm2_5,
+          pm10: result.current.pm10,
+          o3: result.current.ozone,
+          no2: result.current.nitrogen_dioxide,
+          co: result.current.carbon_monoxide,
+          category: details.category,
+          englishLabel: result.current.accuweatherCategory || details.englishLabel,
+          emoji: details.emoji,
+          colorHex: getISPUColorHex(details.category),
+          statusText: details.hazeRisk,
+        };
+        syncCityInSummaryCache(updatedSummary);
+        setAllSummaries((prev) =>
+          prev.length === 0
+            ? [updatedSummary]
+            : prev.map((s) => (s.city.id === result.location.id ? updatedSummary : s))
+        );
       } catch (err: unknown) {
         if (!silent) {
           const msg =
@@ -167,10 +199,16 @@ export function App() {
 
     const interval = setInterval(() => {
       loadData(currentCity, true, true);
-      loadAllSummaries(true);
     }, 10 * 1000);
 
-    return () => clearInterval(interval);
+    const summaryInterval = setInterval(() => {
+      loadAllSummaries(true);
+    }, 60 * 1000);
+
+    return () => {
+      clearInterval(interval);
+      clearInterval(summaryInterval);
+    };
   }, [currentCity, loadData, loadAllSummaries]);
 
   // Handle clicking any coordinate within Indonesia on the OpenStreetMap
@@ -254,9 +292,8 @@ export function App() {
         isDark={isDark}
         onToggleTheme={handleToggleTheme}
         onOpenSearch={() => {
-          setActiveTab('air-maps');
           setMobileMenuOpen(false);
-          setTimeout(() => searchInputRef.current?.focus(), 100);
+          setSearchModalOpen(true);
         }}
         onOpenHealthDrawer={() => setHealthModalOpen(true)}
         data={data}
@@ -278,10 +315,7 @@ export function App() {
           allSummaries={allSummaries}
           isDark={isDark}
           onToggleTheme={handleToggleTheme}
-          onOpenSearch={() => {
-            setActiveTab('air-maps');
-            setTimeout(() => searchInputRef.current?.focus(), 100);
-          }}
+          onOpenSearch={() => setSearchModalOpen(true)}
           onSelectCityById={handleSelectCityById}
           onOpenMobileMenu={() => setMobileMenuOpen(true)}
           onOpenHealthDrawer={() => setHealthModalOpen(true)}
@@ -700,6 +734,22 @@ export function App() {
           </div>
         </div>
       )}
+
+      {/* =====================================================================
+          UNIVERSAL CITY SEARCH MODAL (Apple SF style, Spotlight / iOS Modal)
+         ===================================================================== */}
+      <CitySearchModal
+        isOpen={searchModalOpen}
+        onClose={() => setSearchModalOpen(false)}
+        currentCity={currentCity}
+        allSummaries={allSummaries}
+        onSelectCity={(city) => {
+          setCurrentCity(city);
+          setActiveTab('air-maps');
+        }}
+        onUseGeolocation={handleUseGeolocation}
+        geoLoading={geoLoading}
+      />
     </div>
   );
 }

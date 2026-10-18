@@ -18,8 +18,8 @@ import type {
 } from '../types';
 import { SULTENG_CITIES } from '../constants/cities';
 import { formatWITA } from '../utils/aqiCalculator';
+import appLogo from '../assets/icon.jpeg';
 import {
-  BrandAirIcon,
   GpsTargetIcon,
   MoonModeIcon,
   NavHealthShieldIcon,
@@ -164,8 +164,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               onClick={() => onSelectTab('air-maps')}
               className="flex items-center gap-3 text-left group focus:outline-none cursor-pointer min-w-0"
             >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50/90 dark:bg-indigo-950/60 border border-indigo-100/80 dark:border-indigo-800/50 shadow-2xs transition-transform duration-300 group-hover:scale-105">
-                <BrandAirIcon className="h-6 w-6" />
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl overflow-hidden border border-slate-200/80 dark:border-slate-800 shadow-2xs transition-transform duration-300 group-hover:scale-105">
+                <img src={appLogo} alt="Logo UdaraSulteng" className="h-full w-full object-cover" />
               </div>
               {!isCollapsed && (
                 <div className="flex flex-col min-w-0">
@@ -470,8 +470,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Drawer Header */}
           <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 px-4 py-3.5">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-100 dark:border-indigo-800/60">
-                <BrandAirIcon className="h-5 w-5" />
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl overflow-hidden border border-slate-200/80 dark:border-slate-800 shadow-xs">
+                <img src={appLogo} alt="Logo UdaraSulteng" className="h-full w-full object-cover" />
               </div>
               <div>
                 <h2 className="text-base font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight">
@@ -687,38 +687,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 })}
               </div>
             </div>
-          </div>
-
-          {/* Drawer Footer: Theme Toggle */}
-          <div className="border-t border-slate-200/80 dark:border-slate-800 px-4 py-3 bg-slate-50/60 dark:bg-slate-900/60 flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
-              Tema Tampilan ({isDark ? 'Gelap' : 'Terang'})
-            </span>
-            <button
-              type="button"
-              onClick={onToggleTheme}
-              role="switch"
-              aria-checked={isDark}
-              className="relative inline-flex h-8 w-16 shrink-0 items-center rounded-full border border-slate-200 dark:border-slate-700 bg-slate-200/80 dark:bg-slate-800 p-1 transition-colors duration-500 cursor-pointer"
-            >
-              <span className="flex w-full items-center justify-between px-1 text-slate-400">
-                <SunModeIcon className="h-3.5 w-3.5" />
-                <MoonModeIcon className="h-3.5 w-3.5" />
-              </span>
-              <span
-                className={`absolute top-1 left-1 flex h-6 w-6 items-center justify-center rounded-full shadow-sm transition-all duration-500 ${
-                  isDark
-                    ? 'translate-x-8 bg-indigo-600 text-white'
-                    : 'translate-x-0 bg-white text-amber-500'
-                }`}
-              >
-                {isDark ? (
-                  <MoonModeIcon className="h-3.5 w-3.5" />
-                ) : (
-                  <SunModeIcon className="h-3.5 w-3.5" />
-                )}
-              </span>
-            </button>
           </div>
         </aside>
       </div>

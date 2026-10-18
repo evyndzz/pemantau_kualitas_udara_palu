@@ -268,6 +268,15 @@ export function getISPUColorHex(category: ISPUCategory): string {
   }
 }
 
+export function getAccuWeatherAQIColorHex(aqi: number): string {
+  if (aqi <= 19) return '#10B981'; // Bagus Sekali (Hijau)
+  if (aqi <= 49) return '#10B981'; // Lumayan (Hijau / Baik)
+  if (aqi <= 99) return '#06B6D4'; // Buruk (Toska / Sedang)
+  if (aqi <= 149) return '#F59E0B'; // Tidak Sehat (Kuning / Jingga)
+  if (aqi <= 249) return '#EF4444'; // Sangat Tidak Sehat (Merah)
+  return '#9333EA'; // Berbahaya (Ungu)
+}
+
 export function formatWITA(isoString: string): string {
   try {
     const d = new Date(isoString);
