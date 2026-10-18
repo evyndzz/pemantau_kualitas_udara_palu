@@ -4,7 +4,6 @@ import type { CityLocation, CitySummary, ISPUInfo, NavTab } from '../types';
 import appLogo from '../assets/icon.png';
 import {
   MoonModeIcon,
-  NavHealthShieldIcon,
   StatusShieldBadgeIcon,
   SunModeIcon,
 } from './CustomIcons';
@@ -20,7 +19,7 @@ interface NavbarProps {
   onOpenSearch: () => void;
   onSelectCityById: (cityId: string) => void;
   onOpenMobileMenu: () => void;
-  onOpenHealthDrawer: () => void;
+  onOpenHealthDrawer?: () => void;
 }
 
 const TAB_TITLES: Record<NavTab, { title: string; subtitle: string }> = {
@@ -53,7 +52,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenSearch,
   onSelectCityById,
   onOpenMobileMenu,
-  onOpenHealthDrawer,
+  onOpenHealthDrawer: _onOpenHealthDrawer,
 }) => {
   const [notifOpen, setNotifOpen] = useState(false);
 
@@ -125,24 +124,14 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* Right: Quick Search, Haze Status Summary Bell, Health Shortcut, and Theme Switch */}
+        {/* Right: Haze Status Summary Bell, Quick Search (Mobile), and Theme Switch */}
         <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-          {/* Quick Health Modal Trigger (Desktop) */}
-          <button
-            type="button"
-            onClick={onOpenHealthDrawer}
-            className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900 px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-          >
-            <NavHealthShieldIcon className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
-            <span>Panduan Medis</span>
-          </button>
-
-          {/* Quick Search Trigger */}
+          {/* Quick Search Trigger (Mobile Only, Desktop uses Sidebar search) */}
           <button
             type="button"
             onClick={onOpenSearch}
             title="Cari Kabupaten/Kota di Sulawesi Tengah"
-            className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-200/80 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer"
+            className="flex lg:hidden h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-200/80 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer"
           >
             <Search className="h-3.5 w-3.5 sm:h-4 sm:w-4 stroke-[2]" />
           </button>

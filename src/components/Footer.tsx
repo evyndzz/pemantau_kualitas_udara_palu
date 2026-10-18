@@ -3,7 +3,6 @@ import { Bell, Check, Share2, X } from 'lucide-react';
 import type { AirQualityResponse, CityLocation, ISPUInfo, NavTab } from '../types';
 import { SULTENG_CITIES } from '../constants/cities';
 import { formatWITA } from '../utils/aqiCalculator';
-import { NavHealthShieldIcon } from './CustomIcons';
 
 interface FooterProps {
   data: AirQualityResponse | null;
@@ -22,7 +21,7 @@ export const Footer: React.FC<FooterProps> = ({
   onToggleWatchlist,
   onSelectCity,
   onSelectTab,
-  onOpenHealthDrawer,
+  onOpenHealthDrawer: _onOpenHealthDrawer,
 }) => {
   const [copiedToast, setCopiedToast] = useState(false);
   const [alertPopover, setAlertPopover] = useState(false);
@@ -176,17 +175,8 @@ export const Footer: React.FC<FooterProps> = ({
           )}
         </div>
 
-        {/* Right: Panduan Kesehatan Button & Reset Button */}
+        {/* Right: Reset Button */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={onOpenHealthDrawer}
-            className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 sm:px-4 py-1.5 text-[11px] sm:text-xs font-bold text-slate-800 dark:text-slate-200 shadow-2xs hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer"
-          >
-            <NavHealthShieldIcon className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
-            <span className="sm:hidden">Kesehatan</span>
-            <span className="hidden sm:inline">Panduan Kesehatan</span>
-          </button>
 
           <button
             type="button"

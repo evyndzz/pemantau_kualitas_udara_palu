@@ -5,13 +5,11 @@ import {
   ChevronRight,
   Compass,
   Loader2,
-  MapPin,
   Maximize2,
   Minimize2,
   Minus,
   MousePointerClick,
   Plus,
-  Search,
 } from 'lucide-react';
 import type {
   CityLocation,
@@ -20,10 +18,8 @@ import type {
   ISPUInfo,
   PollutantVisibility,
 } from '../types';
-import { SULTENG_CITIES } from '../constants/cities';
 import { getAccuWeatherAQIColorHex, getPollutantPercentage } from '../utils/aqiCalculator';
 import {
-  GpsTargetIcon,
   LayerControlIcon,
   VisibilityOffIcon,
   VisibilityOnIcon,
@@ -116,10 +112,10 @@ export const AirQualityMap: React.FC<AirQualityMapProps> = ({
   isDark,
   onSelectCity,
   onSelectCoordinate,
-  onUseGeolocation,
-  geoLoading,
+  onUseGeolocation: _onUseGeolocation,
+  geoLoading: _geoLoading,
   loading = false,
-  searchInputRef,
+  searchInputRef: _searchInputRef,
   isMapMaximized = false,
   onToggleMaximizeMap,
 }) => {
@@ -163,8 +159,6 @@ export const AirQualityMap: React.FC<AirQualityMapProps> = ({
     aqiColorArea: true,
   });
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchDropdownOpen, setSearchDropdownOpen] = useState(false);
   const [selectedBubbleInfo, setSelectedBubbleInfo] = useState<string | null>(null);
 
   const onSelectCoordinateRef = useRef(onSelectCoordinate);
@@ -612,13 +606,6 @@ export const AirQualityMap: React.FC<AirQualityMapProps> = ({
     });
   };
 
-  const filteredCities = SULTENG_CITIES.filter(
-    (c) =>
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.district.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   const pm25Pct = getPollutantPercentage('pm2_5', pollutants.pm2_5);
   const pm10Pct = getPollutantPercentage('pm10', pollutants.pm10);
   const o3Pct = getPollutantPercentage('o3', pollutants.ozone);
@@ -878,60 +865,12 @@ export const AirQualityMap: React.FC<AirQualityMapProps> = ({
       )}
 
       {/* =====================================================================
-          TOP CONTROLS (Desktop Search Bar + Responsive Layer Options Button)
+          TOP-RIGHT CONTROLS (Map Layer Options Button)
          ===================================================================== */}
-      <div className="absolute right-2.5 sm:right-5 top-2.5 sm:top-4 z-30 flex items-center justify-end gap-1.5 sm:w-[330px]">
-        {/* Search Input Pill - DESKTOP ONLY (hidden sm:flex) to eliminate duplicate search on mobile */}
-        <div className="hidden sm:flex flex-1 items-center justify-between gap-1.5 rounded-full border border-slate-200/90 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 py-1 pl-4 pr-1 shadow-[0_8px_24px_rgba(15,23,42,0.14)] backdrop-blur-md theme-transition">
-          <MapPin className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
-          <input
-            ref={searchInputRef}
-            type="text"
-            value={searchDropdownOpen ? searchQuery : `${currentCity.name}, Sulteng`}
-            onFocus={() => {
-              setSearchQuery('');
-              setSearchDropdownOpen(true);
-            }}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setSearchDropdownOpen(true);
-            }}
-            placeholder="Cari Kab/Kota di Sulteng..."
-            className="w-full bg-transparent text-xs font-semibold text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none truncate pr-1"
-          />
-
-          {/* Quick GPS Trigger inside Search Bar */}
-          <button
-            type="button"
-            onClick={onUseGeolocation}
-            disabled={geoLoading}
-            title="Deteksi Titik GPS Lokasi Saya"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
-          >
-            {geoLoading ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <GpsTargetIcon className="h-3.5 w-3.5" />
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setSearchDropdownOpen((prev) => !prev)}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white shadow-sm shadow-indigo-600/30 hover:bg-indigo-700 transition-colors cursor-pointer"
-          >
-            <Search className="h-3.5 w-3.5 stroke-[2.2]" />
-          </button>
-        </div>
-
-        {/* Layer Filter Button (Available on both Mobile & Desktop) */}
+      <div className="absolute right-2.5 sm:right-5 top-2.5 sm:top-4 z-30 flex items-center justify-end gap-1.5">
         <button
           type="button"
-          onClick={() => {
-            const next = !viewOptionsOpen;
-            setViewOptionsOpen(next);
-            if (next) setSearchDropdownOpen(false);
-          }}
+          onClick={() => setViewOptionsOpen(!viewOptionsOpen)}
           title="Opsi Tampilan Peta & Polutan"
           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border shadow-[0_8px_24px_rgba(15,23,42,0.14)] backdrop-blur-md transition-all cursor-pointer ${
             viewOptionsOpen
@@ -943,97 +882,11 @@ export const AirQualityMap: React.FC<AirQualityMapProps> = ({
         </button>
       </div>
 
-      {/* Dropdown of all 13 Kabupaten/Kota in Sulawesi Tengah (Desktop Floating List) */}
-      {searchDropdownOpen && (
-        <div className="hidden sm:block absolute right-5 top-14 z-30 w-[330px] rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white/98 dark:bg-slate-900/98 p-2 shadow-[0_20px_50px_rgba(15,23,42,0.25)] backdrop-blur-md theme-transition">
-            <div className="flex items-center justify-between px-3 py-1.5 border-b border-slate-100 dark:border-slate-800">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                13 Kabupaten & Kota Sulteng
-              </span>
-              <button
-                type="button"
-                onClick={() => setSearchDropdownOpen(false)}
-                className="text-[11px] font-semibold text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
-              >
-                Tutup
-              </button>
-            </div>
-
-            {/* GPS Location Option */}
-            <button
-              type="button"
-              onClick={() => {
-                onUseGeolocation();
-                setSearchDropdownOpen(false);
-              }}
-              disabled={geoLoading}
-              className="mt-1 flex w-full items-center gap-2.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/60 px-3 py-2 text-left text-xs font-bold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100/80 dark:hover:bg-indigo-900/60 transition-colors cursor-pointer"
-            >
-              {geoLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin text-indigo-600 dark:text-indigo-400" />
-              ) : (
-                <GpsTargetIcon className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-              )}
-              <span>Deteksi Titik GPS Lokasi Saya</span>
-            </button>
-
-            {/* City List */}
-            <div className="mt-1 max-h-52 overflow-y-auto divide-y divide-slate-50 dark:divide-slate-800/50">
-              {filteredCities.map((city) => {
-                const summary = allSummaries.find((s) => s.city.id === city.id);
-                const isSelected = city.id === currentCity.id;
-                return (
-                  <button
-                    key={city.id}
-                    type="button"
-                    onClick={() => {
-                      onSelectCity(city);
-                      setSearchDropdownOpen(false);
-                    }}
-                    className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left transition-colors cursor-pointer ${
-                      isSelected
-                        ? 'bg-slate-100/90 dark:bg-slate-800 font-bold'
-                        : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <MapPin
-                        className={`h-3.5 w-3.5 shrink-0 ${
-                          isSelected ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'
-                        }`}
-                      />
-                      <div className="truncate">
-                        <p className="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate">
-                          {city.name}
-                        </p>
-                        <p className="text-[10px] text-slate-400 truncate">{city.label}</p>
-                      </div>
-                    </div>
-                    {summary && (
-                      <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                        <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
-                          {summary.pm2_5.toFixed(1)} µg/m³
-                        </span>
-                        <span
-                          className="rounded-full px-2 py-0.5 text-[10px] font-bold text-white"
-                          style={{ backgroundColor: summary.colorHex }}
-                        >
-                          {summary.us_aqi} AQI
-                        </span>
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
       {/* =====================================================================
-          FLOATING "OPSI TAMPILAN" PANEL (Below Search Bar on Mobile, Top-Left on Desktop)
+          FLOATING "OPSI TAMPILAN" PANEL (Neatly Under Top-Right Layer Button)
          ===================================================================== */}
       {viewOptionsOpen && (
-        <div className="absolute left-2.5 right-2.5 sm:right-auto sm:left-5 top-13 sm:top-4 z-20 sm:w-[222px] max-h-[calc(100%-100px)] overflow-y-auto rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 p-3.5 shadow-[0_14px_34px_rgba(15,23,42,0.16)] backdrop-blur-md theme-transition">
+        <div className="absolute right-2.5 sm:right-5 top-13 sm:top-15 z-30 w-[240px] max-w-[calc(100vw-24px)] max-h-[calc(100%-80px)] overflow-y-auto rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 p-3.5 shadow-[0_14px_34px_rgba(15,23,42,0.16)] backdrop-blur-md theme-transition">
           {/* Header */}
           <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2 text-slate-800 dark:text-slate-100">
@@ -1183,40 +1036,6 @@ export const AirQualityMap: React.FC<AirQualityMapProps> = ({
           </div>
         </div>
       )}
-
-      {/* =====================================================================
-          DESKTOP BOTTOM-LEFT CONTROLS (Hidden on Mobile to Keep Map Clean)
-         ===================================================================== */}
-      <div
-        className={`hidden sm:flex absolute bottom-6 z-20 items-center gap-2 transition-all ${
-          viewOptionsOpen ? 'left-[240px]' : 'left-5'
-        }`}
-      >
-        <button
-          type="button"
-          onClick={() => setViewOptionsOpen(!viewOptionsOpen)}
-          title={viewOptionsOpen ? 'Sembunyikan Opsi Tampilan' : 'Tampilkan Opsi Tampilan'}
-          className={`flex h-9 w-9 items-center justify-center rounded-full border shadow-[0_6px_20px_rgba(15,23,42,0.14)] transition-all cursor-pointer ${
-            viewOptionsOpen
-              ? 'border-indigo-600 bg-indigo-600 text-white'
-              : 'border-slate-200/90 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
-          }`}
-        >
-          <LayerControlIcon className="h-4 w-4 shrink-0" />
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setBubblesHiddenManually(!bubblesHiddenManually)}
-          className={`h-9 rounded-full border px-3.5 text-[11px] font-bold shadow-[0_6px_20px_rgba(15,23,42,0.12)] backdrop-blur-md transition-all cursor-pointer ${
-            bubblesHiddenManually
-              ? 'border-indigo-600 bg-indigo-600 text-white'
-              : 'border-slate-200/90 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
-          }`}
-        >
-          {bubblesHiddenManually ? 'Tampilkan Gelembung' : 'Sembunyikan Gelembung'}
-        </button>
-      </div>
 
       {/* =====================================================================
           BOTTOM-RIGHT ZOOM & FULLSCREEN MAP CONTROLS

@@ -21,13 +21,11 @@ import { formatWITA } from '../utils/aqiCalculator';
 import appLogo from '../assets/icon.png';
 import {
   GpsTargetIcon,
-  MoonModeIcon,
   NavHealthShieldIcon,
   NavKarhutlaIcon,
   NavMapLayerIcon,
   NavOverviewIcon,
   StatusShieldBadgeIcon,
-  SunModeIcon,
 } from './CustomIcons';
 
 interface SidebarProps {
@@ -62,8 +60,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggleWatchlist,
   onUseGeolocation,
   geoLoading,
-  isDark,
-  onToggleTheme,
+  isDark: _isDark,
+  onToggleTheme: _onToggleTheme,
   onOpenSearch,
   onOpenHealthDrawer,
   data,
@@ -395,54 +393,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         )}
 
-        {/* Bottom Sidebar Controls: Theme Switch & Emergency Action */}
-        <div className="border-t border-slate-200/80 dark:border-slate-800/80 p-3 space-y-2">
-          {!isCollapsed ? (
-            <div className="flex items-center justify-between rounded-xl bg-slate-50 dark:bg-slate-900/90 px-3 py-2 border border-slate-200/60 dark:border-slate-800">
-              <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
-                {isDark ? 'Mode Gelap' : 'Mode Terang'}
-              </span>
-              <button
-                type="button"
-                onClick={onToggleTheme}
-                role="switch"
-                aria-checked={isDark}
-                className="relative inline-flex h-7 w-14 shrink-0 items-center rounded-full border border-slate-200/90 dark:border-slate-700 bg-slate-200/70 dark:bg-slate-800 p-0.5 transition-colors duration-500 cursor-pointer"
-              >
-                <span className="flex w-full items-center justify-between px-1 text-slate-400">
-                  <SunModeIcon className="h-3 w-3" />
-                  <MoonModeIcon className="h-3 w-3" />
-                </span>
-                <span
-                  className={`absolute top-0.5 left-0.5 flex h-5.5 w-5.5 items-center justify-center rounded-full shadow-xs transition-all duration-500 ${
-                    isDark
-                      ? 'translate-x-7 bg-indigo-600 text-white'
-                      : 'translate-x-0 bg-white text-amber-500'
-                  }`}
-                >
-                  {isDark ? (
-                    <MoonModeIcon className="h-3 w-3" />
-                  ) : (
-                    <SunModeIcon className="h-3 w-3" />
-                  )}
-                </span>
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={onToggleTheme}
-              title={isDark ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
-              className="mx-auto flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-200 cursor-pointer"
-            >
-              {isDark ? (
-                <MoonModeIcon className="h-4 w-4 text-indigo-400" />
-              ) : (
-                <SunModeIcon className="h-4 w-4 text-amber-500" />
-              )}
-            </button>
-          )}
-        </div>
       </aside>
 
       {/* =====================================================================
