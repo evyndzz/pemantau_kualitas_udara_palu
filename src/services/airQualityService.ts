@@ -644,22 +644,69 @@ export async function fetchAirQualityData(
     uv_index: accuLive?.uvIndex ?? Number((aqRes.current?.uv_index ?? 0).toFixed(1)),
   };
 
-  // Build CurrentWeather prioritizing AccuWeather.com live weather data
-  const tempC = accuLive?.temperatureC ?? bmkgStrip?.currentSlot?.t ?? 26;
-  const rh = accuLive?.humidity ?? bmkgStrip?.currentSlot?.hu ?? 79;
-  const realFeelC =
-    accuLive?.realFeelC ?? Math.round(tempC + (rh >= 75 ? 3 : 2));
-  const wsKmh =
-    accuLive?.windSpeedKmh ?? Number((bmkgStrip?.currentSlot?.ws ?? 6.4).toFixed(1));
-  const wdDeg =
-    accuLive?.windDirectionDeg ?? Math.round(bmkgStrip?.currentSlot?.wd_deg ?? 112);
-  const wdCode = accuLive?.windDirectionCode || bmkgStrip?.currentSlot?.wd || 'TTG';
-  const weatherPhrase =
-    accuLive?.weatherDesc || bmkgStrip?.currentSlot?.weather_desc || 'Sedikit awan';
-  const weatherIcon =
-    accuLive?.weatherIconUrl ||
-    bmkgStrip?.currentSlot?.image ||
-    'https://www.accuweather.com/images/weathericons/v2a/36.svg';
+  // Cross-validated Weather Synthesis:
+  // BMKG Indonesia operates physical weather radar and ground meteorological stations in Palu (Sis Al-Jufri)
+  // and Sulteng regencies, whereas global numerical models (AccuWeather) often overestimate convective thunderstorms
+  // due to tropical maritime humidity over Palu Bay, ignoring the rain shadow effect of the Palu Graben.
+  const isAccuThunderstorm =
+    accuLive?.weatherDesc &&
+    /petir|badai|thunderstorm/i.test(accuLive.weatherDesc);
+
+  const bmkgHasData = Boolean(bmkgStrip?.currentSlot?.weather_desc);
+  const bmkgIsFairOrCloudy =
+    bmkgStrip?.currentSlot?.weather_desc &&
+    /cerah|berawan|kabut|haze/i.test(bmkgStrip.currentSlot.weather_desc);
+
+  // If AccuWeather claims "Badai petir" while BMKG station reports "Cerah Berawan" or "Cerah",
+  // reject the false thunderstorm alarm and prioritize the official BMKG station observation.
+  const preferBMKG =
+    bmkgHasData &&
+    (Boolean(isAccuThunderstorm && bmkgIsFairOrCloudy) || !accuLive?.weatherDesc);
+
+  const weatherPhrase = preferBMKG
+    ? bmkgStrip!.currentSlot!.weather_desc
+    : (accuLive?.weatherDesc || bmkgStrip?.currentSlot?.weather_desc || 'Cerah Berawan');
+
+  // Weather icon: if preferBMKG or BMKG image is valid, use BMKG image or a reliable matching icon
+  let weatherIcon = bmkgStrip?.currentSlot?.image || accuLive?.weatherIconUrl || '';
+  if (preferBMKG || (!weatherIcon || weatherIcon.includes('17.svg') || weatherIcon.includes('15.svg'))) {
+    if (bmkgStrip?.currentSlot?.image) {
+      weatherIcon = bmkgStrip.currentSlot.image;
+    } else {
+      // Clean fallback icon for Cerah Berawan / Partly Cloudy
+      weatherIcon = 'https://api-apps.bmkg.go.id/storage/icon/cuaca/cerah berawan-am.svg';
+    }
+  }
+
+  // Temperature & Humidity: Prioritize BMKG local station reading when available
+  const tempC = bmkgStrip?.currentSlot?.t ?? accuLive?.temperatureC ?? 27;
+  const rh = bmkgStrip?.currentSlot?.hu ?? accuLive?.humidity ?? 77;
+
+  // RealFeel calculation based on temperature & humidity
+  const heatIndexOffset = rh >= 80 ? 3 : rh >= 65 ? 2 : 1;
+  const realFeelC = accuLive?.realFeelC && Math.abs(accuLive.realFeelC - tempC) <= 4
+    ? accuLive.realFeelC
+    : Math.round(tempC + heatIndexOffset);
+
+  const realFeelLabel =
+    realFeelC >= 34
+      ? 'Sangat Panas'
+      : realFeelC >= 30
+      ? 'Panas'
+      : realFeelC >= 26
+      ? 'Hangat'
+      : 'Nyaman';
+
+  const wsKmh = Number(
+    (bmkgStrip?.currentSlot?.ws ?? accuLive?.windSpeedKmh ?? 5.4).toFixed(1)
+  );
+  const wdDeg = Math.round(
+    bmkgStrip?.currentSlot?.wd_deg ?? accuLive?.windDirectionDeg ?? 336
+  );
+  const wdCode =
+    bmkgStrip?.currentSlot?.wd || accuLive?.windDirectionCode || 'NW';
+  const cloudCover =
+    bmkgStrip?.currentSlot?.tcc ?? accuLive?.cloudCover ?? 65;
 
   const key = resolvedLoc.accuweatherKey || '205850';
   const slug = resolvedLoc.accuweatherSlug || 'palu';
@@ -669,25 +716,25 @@ export async function fetchAirQualityData(
     time: new Date().toISOString(),
     temperature: tempC,
     apparentTemperature: realFeelC,
-    realFeelLabel: accuLive?.realFeelLabel || (realFeelC >= 29 ? 'Sangat Hangat' : 'Hangat'),
+    realFeelLabel: accuLive?.realFeelLabel || realFeelLabel,
     humidity: rh,
     windSpeed: wsKmh,
     windDirection: wdDeg,
     windDirectionCode: wdCode,
     windGusts: accuLive?.windGustsKmh ?? Number((wsKmh * 1.5).toFixed(1)),
-    weatherCode: bmkgStrip?.currentSlot?.weather ?? 1,
+    weatherCode: bmkgStrip?.currentSlot?.weather ?? 2,
     weatherDesc: weatherPhrase,
     weatherIconUrl: weatherIcon,
-    cloudCover: accuLive?.cloudCover ?? bmkgStrip?.currentSlot?.tcc ?? 60,
+    cloudCover,
     visibilityKm: accuLive?.visibilityKm ?? 8.0,
     dewPoint: accuLive?.dewPointC ?? 22,
     surfacePressure: accuLive?.pressureHpa ?? 1010,
     accuweatherUrl,
     accuweatherLocationKey: key,
     bmkgAdm4: bmkgStrip?.adm4 || resolvedLoc.bmkgAdm4,
-    bmkgStationName: `${resolvedLoc.name} (AccuWeather Key #${key})`,
+    bmkgStationName: bmkgStrip?.stationName || `${resolvedLoc.name} (Stasiun BMKG)`,
     bmkgForecasts: bmkgStrip?.forecasts,
-    sourceLabel: `AccuWeather.com (${slug}/${key}) & Plume Labs AQI`,
+    sourceLabel: `BMKG Indonesia (${resolvedLoc.name}) & AccuWeather/Plume AQI`,
   };
 
   // Scale hourly & daily series so they align smoothly with AccuWeather's live reading
@@ -842,12 +889,54 @@ export async function fetchAllSultengCitiesSummary(forceRefresh = false): Promis
 
 /**
  * Reverse geocodes any clicked/panned coordinate on OpenStreetMap using Nominatim
+/**
+ * Checks whether a given latitude/longitude coordinate falls inside Provinsi Sulawesi Tengah
+ */
+export function isWithinSultengRegion(
+  lat: number,
+  lng: number
+): { valid: boolean; reason: string } {
+  // 1. Boundary box of Central Sulawesi Province
+  if (lat < -3.45 || lat > 1.45 || lng < 119.20 || lng > 124.30) {
+    return { valid: false, reason: 'Di luar batas administratif Sulawesi Tengah' };
+  }
+
+  // 2. Exclude Gorontalo (northeast of Buol / Parigi Moutong border)
+  if (lat > 0.40 && lng > 121.75) {
+    return { valid: false, reason: 'Wilayah Provinsi Gorontalo' };
+  }
+
+  // 3. Exclude Sulawesi Barat (west of Donggala / Sigi)
+  if (lat < -1.10 && lng < 119.55) {
+    return { valid: false, reason: 'Wilayah Provinsi Sulawesi Barat' };
+  }
+
+  // 4. Exclude Sulawesi Selatan (south of Poso / Morowali Utara)
+  if (lat < -2.35 && lng < 121.35) {
+    return { valid: false, reason: 'Wilayah Provinsi Sulawesi Selatan' };
+  }
+
+  // 5. Exclude Sulawesi Tenggara (south of Morowali)
+  if (lat < -3.30 && lng < 122.50) {
+    return { valid: false, reason: 'Wilayah Provinsi Sulawesi Tenggara' };
+  }
+
+  return { valid: true, reason: 'Sulawesi Tengah' };
+}
+
+/**
+ * Resolves a lat/lng coordinate inside Sulawesi Tengah into an approximate named locality
  * and attaches the nearest Sulteng Kabupaten/Kota's AccuWeather location key & BMKG ADM4 code.
  */
 export async function resolveLocationFromCoordinates(
   lat: number,
   lng: number
 ): Promise<CityLocation> {
+  const check = isWithinSultengRegion(lat, lng);
+  if (!check.valid) {
+    throw new Error(`Titik berada di ${check.reason}. Pemantau ini khusus untuk 13 Kabupaten/Kota di Provinsi Sulawesi Tengah.`);
+  }
+
   let closest = SULTENG_CITIES[0];
   let minDistance = Number.MAX_VALUE;
   for (const city of SULTENG_CITIES) {
@@ -881,6 +970,9 @@ export async function resolveLocationFromCoordinates(
       addr.regency ||
       addr.state_district ||
       closest.name;
+    if (addr.state && !addr.state.toLowerCase().includes('sulawesi tengah')) {
+      throw new Error(`Titik berada di wilayah ${addr.state}. Pemantau ini khusus wilayah Provinsi Sulawesi Tengah.`);
+    }
     const state = addr.state || 'Sulawesi Tengah';
 
     const displayName =

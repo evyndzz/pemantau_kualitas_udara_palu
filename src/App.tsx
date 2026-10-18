@@ -211,11 +211,22 @@ export function App() {
     };
   }, [currentCity, loadData, loadAllSummaries]);
 
-  // Handle clicking any coordinate within Indonesia on the OpenStreetMap
+  // Handle clicking any coordinate within Provinsi Sulawesi Tengah on the OpenStreetMap
   const handleSelectCoordinate = useCallback(async (lat: number, lng: number) => {
     setLoading(true);
-    const resolvedLoc = await resolveLocationFromCoordinates(lat, lng);
-    setCurrentCity(resolvedLoc);
+    setError(null);
+    try {
+      const resolvedLoc = await resolveLocationFromCoordinates(lat, lng);
+      setCurrentCity(resolvedLoc);
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : 'Titik berada di luar wilayah administratif Sulawesi Tengah.';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   const handleToggleWatchlist = (cityId: string) => {
@@ -239,16 +250,26 @@ export function App() {
     }
 
     setGeoLoading(true);
+    setError(null);
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const { latitude, longitude } = pos.coords;
         setUserLocation({ lat: latitude, lng: longitude });
-        const resolved = await resolveLocationFromCoordinates(latitude, longitude);
-        setCurrentCity({
-          ...resolved,
-          name: `Lokasi GPS (${resolved.name})`,
-        });
-        setGeoLoading(false);
+        try {
+          const resolved = await resolveLocationFromCoordinates(latitude, longitude);
+          setCurrentCity({
+            ...resolved,
+            name: `Lokasi GPS (${resolved.name})`,
+          });
+        } catch (err: unknown) {
+          const msg =
+            err instanceof Error
+              ? err.message
+              : 'Lokasi GPS Anda terdeteksi di luar wilayah Sulawesi Tengah.';
+          setError(msg);
+        } finally {
+          setGeoLoading(false);
+        }
       },
       (err) => {
         setGeoLoading(false);

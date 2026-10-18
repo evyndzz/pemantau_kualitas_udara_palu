@@ -90,7 +90,7 @@ export const WeatherHazeCard: React.FC<WeatherHazeCardProps> = ({ weather, cityN
         <div className="col-span-2 sm:col-span-1 rounded-2xl border border-sky-100 dark:border-sky-900/50 bg-sky-50/50 dark:bg-sky-950/30 p-4 flex sm:flex-col items-center sm:items-start justify-between gap-3">
           <div>
             <span className="text-xs font-semibold text-sky-700 dark:text-sky-300 block">
-              Cuaca AccuWeather
+              Kondisi Cuaca (BMKG)
             </span>
             <span className="mt-1.5 text-base font-extrabold text-slate-900 dark:text-white block">
               {weather.weatherDesc || 'Sedikit awan'}
@@ -173,7 +173,7 @@ export const WeatherHazeCard: React.FC<WeatherHazeCardProps> = ({ weather, cityN
         {/* Temperature */}
         <div className="rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 p-4">
           <div className="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
-            <span>Suhu AccuWeather</span>
+            <span>Suhu Udara (BMKG)</span>
             <Thermometer className="h-4 w-4 text-rose-500" />
           </div>
           <div className="mt-2.5">

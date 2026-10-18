@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import {
+  AlertTriangle,
   ChevronDown,
   ChevronRight,
   Compass,
@@ -18,6 +19,7 @@ import type {
   ISPUInfo,
   PollutantVisibility,
 } from '../types';
+import { isWithinSultengRegion } from '../services/airQualityService';
 import { getAccuWeatherAQIColorHex, getPollutantPercentage } from '../utils/aqiCalculator';
 import {
   LayerControlIcon,
@@ -42,15 +44,10 @@ interface AirQualityMapProps {
   onToggleMaximizeMap?: () => void;
 }
 
-// Strict geographic bounding box for the Republic of Indonesia (with vertical margin for portrait mobile viewports)
-const INDONESIA_BOUNDS = L.latLngBounds(
-  L.latLng(-13.5, 93.5),
-  L.latLng(8.5, 142.5)
-);
-
-const INDONESIA_CLICK_BOUNDS = L.latLngBounds(
-  L.latLng(-11.5, 94.5),
-  L.latLng(6.5, 141.5)
+// Geographic bounding box centered on Sulawesi Tengah & its surrounding gulfs/seas
+const SULTENG_REGIONAL_BOUNDS = L.latLngBounds(
+  L.latLng(-4.8, 118.0),
+  L.latLng(2.6, 126.0)
 );
 
 /**
@@ -160,6 +157,15 @@ export const AirQualityMap: React.FC<AirQualityMapProps> = ({
   });
 
   const [selectedBubbleInfo, setSelectedBubbleInfo] = useState<string | null>(null);
+  const [outsideWarning, setOutsideWarning] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!outsideWarning) return;
+    const timer = window.setTimeout(() => {
+      setOutsideWarning(null);
+    }, 4500);
+    return () => window.clearTimeout(timer);
+  }, [outsideWarning]);
 
   const onSelectCoordinateRef = useRef(onSelectCoordinate);
   useEffect(() => {
@@ -202,17 +208,17 @@ export const AirQualityMap: React.FC<AirQualityMapProps> = ({
       zoom: initialZoom,
       minZoom: 5,
       maxZoom: 18,
-      maxBounds: INDONESIA_BOUNDS,
+      maxBounds: SULTENG_REGIONAL_BOUNDS,
       maxBoundsViscosity: 0.85,
       zoomControl: false,
       attributionControl: false,
     });
 
-    // Official OpenStreetMap Tile Layer restricted to Indonesia bounds
+    // Official OpenStreetMap Tile Layer restricted to Sulawesi Tengah bounds
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       minZoom: 5,
-      bounds: INDONESIA_BOUNDS,
+      bounds: SULTENG_REGIONAL_BOUNDS,
       subdomains: ['a', 'b', 'c'],
       attribution:
         '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>',
@@ -258,11 +264,17 @@ export const AirQualityMap: React.FC<AirQualityMapProps> = ({
     map.on('zoomend', handleInteractEnd);
     map.on('resize', updatePinScreenPosition);
 
-    // Click anywhere within Indonesia bounds to inspect air quality
+    // Click anywhere on map: restricted strictly to Provinsi Sulawesi Tengah (13 Kabupaten/Kota)
     map.on('click', (e: L.LeafletMouseEvent) => {
-      if (INDONESIA_CLICK_BOUNDS.contains(e.latlng)) {
-        onSelectCoordinateRef.current(e.latlng.lat, e.latlng.lng);
+      const check = isWithinSultengRegion(e.latlng.lat, e.latlng.lng);
+      if (!check.valid) {
+        setOutsideWarning(
+          `Titik (${e.latlng.lat.toFixed(2)}, ${e.latlng.lng.toFixed(2)}) berada di ${check.reason}. Pemantau ini khusus untuk 13 Kabupaten/Kota di Provinsi Sulawesi Tengah.`
+        );
+        return;
       }
+      setOutsideWarning(null);
+      onSelectCoordinateRef.current(e.latlng.lat, e.latlng.lng);
     });
 
     const syncSizeTimer = window.setTimeout(() => {
@@ -819,11 +831,31 @@ export const AirQualityMap: React.FC<AirQualityMapProps> = ({
           <>
             <MousePointerClick className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
             <span>
-              Klik titik mana saja di peta wilayah Indonesia untuk memeriksa kualitas udara lokasi tersebut
+              Klik titik mana saja di peta wilayah Sulawesi Tengah untuk memeriksa kualitas udara lokasi tersebut
             </span>
           </>
         )}
       </div>
+
+      {/* Outside Sulawesi Tengah Warning Alert Toast */}
+      {outsideWarning && (
+        <div className="absolute top-3 sm:top-4 left-3 right-3 sm:left-1/2 sm:-translate-x-1/2 sm:max-w-md z-40 flex items-center justify-between gap-2.5 rounded-2xl border border-amber-300/80 dark:border-amber-600/60 bg-amber-50/95 dark:bg-amber-950/95 p-3 text-amber-900 dark:text-amber-200 shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center gap-2 min-w-0">
+            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+            <span className="text-[11px] sm:text-xs font-semibold leading-snug">
+              {outsideWarning}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setOutsideWarning(null)}
+            className="text-amber-600 dark:text-amber-400 hover:text-amber-950 dark:hover:text-amber-100 p-1 font-bold text-xs shrink-0 cursor-pointer"
+            aria-label="Tutup peringatan batas wilayah"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Popover Info when a Pollutant Bubble or Chip is clicked */}
       {selectedBubbleInfo && (
