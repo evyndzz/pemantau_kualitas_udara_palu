@@ -18,7 +18,7 @@ import type {
 } from '../types';
 import { SULTENG_CITIES } from '../constants/cities';
 import { formatWITA } from '../utils/aqiCalculator';
-import appLogo from '../assets/icon.jpeg';
+import appLogo from '../assets/icon.png';
 import {
   GpsTargetIcon,
   MoonModeIcon,
@@ -164,8 +164,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               onClick={() => onSelectTab('air-maps')}
               className="flex items-center gap-3 text-left group focus:outline-none cursor-pointer min-w-0"
             >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl overflow-hidden border border-slate-200/80 dark:border-slate-800 shadow-2xs transition-transform duration-300 group-hover:scale-105">
-                <img src={appLogo} alt="Logo UdaraSulteng" className="h-full w-full object-cover" />
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full overflow-hidden border border-slate-200/80 dark:border-slate-800 shadow-2xs transition-transform duration-300 group-hover:scale-105">
+                <img src={appLogo} alt="Logo UdaraSulteng" className="h-full w-full object-cover rounded-full" />
               </div>
               {!isCollapsed && (
                 <div className="flex flex-col min-w-0">
@@ -470,8 +470,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Drawer Header */}
           <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 px-4 py-3.5">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl overflow-hidden border border-slate-200/80 dark:border-slate-800 shadow-xs">
-                <img src={appLogo} alt="Logo UdaraSulteng" className="h-full w-full object-cover" />
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full overflow-hidden border border-slate-200/80 dark:border-slate-800 shadow-xs">
+                <img src={appLogo} alt="Logo UdaraSulteng" className="h-full w-full object-cover rounded-full" />
               </div>
               <div>
                 <h2 className="text-base font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight">
