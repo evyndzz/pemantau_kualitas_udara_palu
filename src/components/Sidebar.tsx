@@ -571,12 +571,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onCloseMobile();
                 }}
                 disabled={geoLoading}
-                className="w-full flex items-center gap-2.5 rounded-xl bg-indigo-50/80 dark:bg-indigo-950/60 border border-indigo-200/70 dark:border-indigo-800/60 px-3 py-2 text-xs font-bold text-indigo-700 dark:text-indigo-300 cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-50/80 dark:bg-indigo-950/60 border border-indigo-200/70 dark:border-indigo-800/60 px-3 py-2.5 text-xs font-bold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100/80 dark:hover:bg-indigo-900/60 transition-colors cursor-pointer"
               >
                 {geoLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin shrink-0" />
                 ) : (
-                  <GpsTargetIcon className="h-4 w-4" />
+                  <GpsTargetIcon className="h-4 w-4 shrink-0" />
                 )}
                 <span>Deteksi Lokasi GPS Saya</span>
               </button>
