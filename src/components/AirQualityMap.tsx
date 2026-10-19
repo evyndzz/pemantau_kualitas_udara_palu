@@ -218,11 +218,10 @@ const AirQualityMapComponent: React.FC<AirQualityMapProps> = ({
       attributionControl: false,
     });
 
-    // Official OpenStreetMap Tile Layer restricted to Sulawesi Tengah bounds
+    // Official OpenStreetMap Tile Layer
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       minZoom: 5,
-      bounds: SULTENG_REGIONAL_BOUNDS,
       subdomains: ['a', 'b', 'c'],
       attribution:
         '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>',
