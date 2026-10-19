@@ -8,7 +8,7 @@ interface WeatherHazeCardProps {
   cityName: string;
 }
 
-export const WeatherHazeCard: React.FC<WeatherHazeCardProps> = ({ weather, cityName }) => {
+const WeatherHazeCardComponent: React.FC<WeatherHazeCardProps> = ({ weather, cityName }) => {
   const dirLabel = getWindDirectionLabel(weather.windDirection);
 
   const isDry = weather.humidity < 60;
@@ -250,3 +250,5 @@ export const WeatherHazeCard: React.FC<WeatherHazeCardProps> = ({ weather, cityN
     </div>
   );
 };
+
+export const WeatherHazeCard = React.memo(WeatherHazeCardComponent);

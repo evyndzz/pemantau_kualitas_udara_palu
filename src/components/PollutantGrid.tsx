@@ -7,7 +7,7 @@ interface PollutantGridProps {
   pollutants: CurrentPollutants;
 }
 
-export const PollutantGrid: React.FC<PollutantGridProps> = ({ pollutants }) => {
+const PollutantGridComponent: React.FC<PollutantGridProps> = ({ pollutants }) => {
   const pm25Aqi = pollutants.pm2_5_aqi ?? getPollutantPercentage('pm2_5', pollutants.pm2_5);
   const pm10Aqi = pollutants.pm10_aqi ?? getPollutantPercentage('pm10', pollutants.pm10);
   const o3Aqi = pollutants.o3_aqi ?? getPollutantPercentage('o3', pollutants.ozone);
@@ -148,3 +148,5 @@ export const PollutantGrid: React.FC<PollutantGridProps> = ({ pollutants }) => {
     </div>
   );
 };
+
+export const PollutantGrid = React.memo(PollutantGridComponent);

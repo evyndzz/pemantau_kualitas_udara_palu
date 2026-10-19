@@ -41,7 +41,7 @@ const TAB_TITLES: Record<NavTab, { title: string; subtitle: string }> = {
   },
 };
 
-export const Navbar: React.FC<NavbarProps> = ({
+const NavbarComponent: React.FC<NavbarProps> = ({
   activeTab,
   onSelectTab,
   currentCity,
@@ -238,3 +238,5 @@ export const Navbar: React.FC<NavbarProps> = ({
     </header>
   );
 };
+
+export const Navbar = React.memo(NavbarComponent);

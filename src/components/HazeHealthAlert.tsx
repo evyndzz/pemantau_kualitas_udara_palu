@@ -7,7 +7,7 @@ interface HazeHealthAlertProps {
   ispuInfo?: ISPUInfo | null;
 }
 
-export const HazeHealthAlert: React.FC<HazeHealthAlertProps> = ({ ispuInfo }) => {
+const HazeHealthAlertComponent: React.FC<HazeHealthAlertProps> = ({ ispuInfo }) => {
   return (
     <div className="rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0D1322] p-5 sm:p-6 shadow-[0_8px_30px_rgba(15,23,42,0.04)] theme-transition">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
@@ -139,3 +139,5 @@ export const HazeHealthAlert: React.FC<HazeHealthAlertProps> = ({ ispuInfo }) =>
     </div>
   );
 };
+
+export const HazeHealthAlert = React.memo(HazeHealthAlertComponent);

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
 import { CitySelector } from './components/CitySelector';
@@ -192,22 +192,49 @@ export function App() {
     }
   }, []);
 
-  // Initial load & automatic silent update every 10 seconds without manual refresh
+  // Initial load & automatic silent update with Page Visibility API awareness (saves battery & CPU on mobile)
   useEffect(() => {
+    let isMounted = true;
     loadData(currentCity, false, false);
     loadAllSummaries(false);
 
-    const interval = setInterval(() => {
-      loadData(currentCity, true, true);
-    }, 10 * 1000);
+    let intervalId: number | null = null;
+    let summaryIntervalId: number | null = null;
 
-    const summaryInterval = setInterval(() => {
-      loadAllSummaries(true);
-    }, 60 * 1000);
+    const startTimers = () => {
+      if (intervalId) clearInterval(intervalId);
+      if (summaryIntervalId) clearInterval(summaryIntervalId);
+
+      intervalId = window.setInterval(() => {
+        if (!document.hidden && isMounted) {
+          loadData(currentCity, true, true);
+        }
+      }, 30 * 1000);
+
+      summaryIntervalId = window.setInterval(() => {
+        if (!document.hidden && isMounted) {
+          loadAllSummaries(true);
+        }
+      }, 90 * 1000);
+    };
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden && isMounted) {
+        // Instant refresh when user returns to app/tab
+        loadData(currentCity, true, true);
+        loadAllSummaries(true);
+        startTimers();
+      }
+    };
+
+    startTimers();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      clearInterval(interval);
-      clearInterval(summaryInterval);
+      isMounted = false;
+      if (intervalId) clearInterval(intervalId);
+      if (summaryIntervalId) clearInterval(summaryIntervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [currentCity, loadData, loadAllSummaries]);
 
@@ -279,19 +306,33 @@ export function App() {
     );
   };
 
-  const handleSelectCityById = (cityId: string) => {
+  const handleSelectCity = useCallback((city: CityLocation) => {
+    setCurrentCity(city);
+  }, []);
+
+  const handleSelectCityById = useCallback((cityId: string) => {
     const found = SULTENG_CITIES.find((c) => c.id === cityId);
     if (found) setCurrentCity(found);
-  };
+  }, []);
 
-  const ispuScore = data
-    ? Math.max(
-        calculatePM25ISPU(data.current.pm2_5),
-        calculatePM10ISPU(data.current.pm10)
-      )
-    : 0;
+  const handleSelectCityAndOpenMap = useCallback((city: CityLocation) => {
+    setCurrentCity(city);
+    setActiveTab('air-maps');
+  }, []);
 
-  const ispuInfo = data ? getISPUDetails(ispuScore, data.current.us_aqi) : null;
+  const currentPollutants = data?.current;
+  const ispuScore = useMemo(() => {
+    if (!currentPollutants) return 0;
+    return Math.max(
+      calculatePM25ISPU(currentPollutants.pm2_5),
+      calculatePM10ISPU(currentPollutants.pm10)
+    );
+  }, [currentPollutants]);
+
+  const ispuInfo = useMemo(() => {
+    if (!currentPollutants) return null;
+    return getISPUDetails(ispuScore, currentPollutants.us_aqi);
+  }, [currentPollutants, ispuScore]);
 
   return (
     <div
@@ -304,7 +345,7 @@ export function App() {
         activeTab={activeTab}
         onSelectTab={(tab) => setActiveTab(tab)}
         currentCity={currentCity}
-        onSelectCity={(city) => setCurrentCity(city)}
+        onSelectCity={handleSelectCity}
         allSummaries={allSummaries}
         watchlistIds={watchlistIds}
         onToggleWatchlist={handleToggleWatchlist}
@@ -387,7 +428,7 @@ export function App() {
               allSummaries={allSummaries}
               userLocation={userLocation}
               isDark={isDark}
-              onSelectCity={(city) => setCurrentCity(city)}
+              onSelectCity={handleSelectCity}
               onSelectCoordinate={handleSelectCoordinate}
               onUseGeolocation={handleUseGeolocation}
               geoLoading={geoLoading}
@@ -564,10 +605,7 @@ export function App() {
               <CitySelector
                 currentCity={currentCity}
                 allSummaries={allSummaries}
-                onSelectCity={(city) => {
-                  setCurrentCity(city);
-                  setActiveTab('air-maps');
-                }}
+                onSelectCity={handleSelectCityAndOpenMap}
                 onUseGeolocation={handleUseGeolocation}
                 geoLoading={geoLoading}
               />
@@ -719,10 +757,7 @@ export function App() {
             ispuInfo={ispuInfo}
             watchlistIds={watchlistIds}
             onToggleWatchlist={handleToggleWatchlist}
-            onSelectCity={(city) => {
-              setCurrentCity(city);
-              setActiveTab('air-maps');
-            }}
+            onSelectCity={handleSelectCityAndOpenMap}
             onSelectTab={(tab) => setActiveTab(tab)}
             onOpenHealthDrawer={() => setHealthModalOpen(true)}
           />

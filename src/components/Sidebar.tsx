@@ -50,7 +50,7 @@ interface SidebarProps {
   onCloseMobile: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({
+const SidebarComponent: React.FC<SidebarProps> = ({
   activeTab,
   onSelectTab,
   currentCity,
@@ -643,4 +643,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     </>
   );
 };
+
+export const Sidebar = React.memo(SidebarComponent);
 

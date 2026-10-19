@@ -20,7 +20,7 @@ interface ChartItem {
   isForecast: boolean;
 }
 
-export const HourlyForecastChart: React.FC<HourlyForecastChartProps> = ({
+const HourlyForecastChartComponent: React.FC<HourlyForecastChartProps> = ({
   hourly,
   daily,
   cityName,
@@ -405,3 +405,5 @@ export const HourlyForecastChart: React.FC<HourlyForecastChartProps> = ({
     </div>
   );
 };
+
+export const HourlyForecastChart = React.memo(HourlyForecastChartComponent);

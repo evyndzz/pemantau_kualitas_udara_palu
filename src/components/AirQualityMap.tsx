@@ -100,7 +100,7 @@ const MoleculeClusterIcon: React.FC<{ color?: string; size?: 'sm' | 'md' | 'lg' 
   );
 };
 
-export const AirQualityMap: React.FC<AirQualityMapProps> = ({
+const AirQualityMapComponent: React.FC<AirQualityMapProps> = ({
   currentCity,
   pollutants,
   ispuInfo,
@@ -126,6 +126,10 @@ export const AirQualityMap: React.FC<AirQualityMapProps> = ({
   const [containerWidth, setContainerWidth] = useState<number>(() =>
     typeof window !== 'undefined' ? window.innerWidth : 1024
   );
+  const containerWidthRef = useRef<number>(containerWidth);
+  useEffect(() => {
+    containerWidthRef.current = containerWidth;
+  }, [containerWidth]);
   const [isMapInteracting, setIsMapInteracting] = useState<boolean>(false);
   const [bubblesHiddenManually, setBubblesHiddenManually] = useState<boolean>(false);
   // On mobile (< 640px), default to compact bottom pill strip so the map view is wide open and never blocked by giant bubbles
@@ -241,10 +245,6 @@ export const AirQualityMap: React.FC<AirQualityMapProps> = ({
       setIsMapInteracting(true);
     };
 
-    const handleInteractMove = () => {
-      updatePinScreenPosition();
-    };
-
     const handleInteractEnd = () => {
       updatePinScreenPosition();
       if (interactTimeoutRef.current) {
@@ -253,13 +253,13 @@ export const AirQualityMap: React.FC<AirQualityMapProps> = ({
       interactTimeoutRef.current = window.setTimeout(() => {
         setIsMapInteracting(false);
         updatePinScreenPosition();
-      }, 180);
+      }, 150);
     };
 
     map.on('movestart', handleInteractStart);
     map.on('zoomstart', handleInteractStart);
-    map.on('move', handleInteractMove);
-    map.on('zoom', handleInteractMove);
+    // Note: Do not attach setState on 'move' and 'zoom' events during active pan/pinch
+    // Leaflet moves GPU canvas natively at 60 FPS without React re-render overhead!
     map.on('moveend', handleInteractEnd);
     map.on('zoomend', handleInteractEnd);
     map.on('resize', updatePinScreenPosition);
@@ -434,7 +434,7 @@ export const AirQualityMap: React.FC<AirQualityMapProps> = ({
       zIndexOffset: 1000,
     });
     centerMarker.on('click', () => {
-      if (containerWidth < 640) {
+      if (containerWidthRef.current < 640) {
         setMobileOrbitalBubbles((prev) => !prev);
       } else {
         setBubblesHiddenManually((prev) => !prev);
@@ -524,10 +524,12 @@ export const AirQualityMap: React.FC<AirQualityMapProps> = ({
   }, [
     allSummaries,
     appliedVisibility.aqiColorArea,
-    containerWidth,
-    currentCity,
+    currentCity.id,
+    currentCity.lat,
+    currentCity.lng,
+    currentCity.name,
     isDark,
-    ispuInfo,
+    ispuInfo.colorHex,
     onSelectCity,
     pollutants.us_aqi,
     updatePinScreenPosition,
@@ -1119,3 +1121,5 @@ export const AirQualityMap: React.FC<AirQualityMapProps> = ({
     </div>
   );
 };
+
+export const AirQualityMap = React.memo(AirQualityMapComponent);

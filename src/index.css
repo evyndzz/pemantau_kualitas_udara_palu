@@ -72,7 +72,18 @@ html.dark .leaflet-container {
 }
 
 .leaflet-tile-pane {
+  contain: layout paint;
+  transform: translateZ(0);
   transition: filter 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Hardware acceleration & layout containment for interactive pins on mobile */
+.center-city-pin,
+.sulteng-city-pin,
+.user-gps-pin {
+  will-change: transform;
+  transform: translateZ(0);
+  contain: layout style;
 }
 
 html.dark .leaflet-tile-pane {

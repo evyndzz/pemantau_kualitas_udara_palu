@@ -12,7 +12,7 @@ interface CitySelectorProps {
   geoLoading: boolean;
 }
 
-export const CitySelector: React.FC<CitySelectorProps> = ({
+const CitySelectorComponent: React.FC<CitySelectorProps> = ({
   currentCity,
   allSummaries,
   onSelectCity,
@@ -108,3 +108,5 @@ export const CitySelector: React.FC<CitySelectorProps> = ({
     </div>
   );
 };
+
+export const CitySelector = React.memo(CitySelectorComponent);

@@ -8,7 +8,7 @@ interface AQIHeroCardProps {
   isDark?: boolean;
 }
 
-export const AQIHeroCard: React.FC<AQIHeroCardProps> = ({ data, ispuInfo, isDark = false }) => {
+const AQIHeroCardComponent: React.FC<AQIHeroCardProps> = ({ data, ispuInfo, isDark = false }) => {
   const [standard, setStandard] = useState<'aqi' | 'ispu'>('aqi');
 
   const displayScore = standard === 'aqi' ? data.current.us_aqi : ispuInfo.score;
@@ -195,3 +195,5 @@ export const AQIHeroCard: React.FC<AQIHeroCardProps> = ({ data, ispuInfo, isDark
     </div>
   );
 };
+
+export const AQIHeroCard = React.memo(AQIHeroCardComponent);

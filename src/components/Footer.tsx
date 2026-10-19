@@ -14,7 +14,7 @@ interface FooterProps {
   onOpenHealthDrawer: () => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({
+const FooterComponent: React.FC<FooterProps> = ({
   data,
   ispuInfo,
   watchlistIds,
@@ -191,3 +191,5 @@ export const Footer: React.FC<FooterProps> = ({
     </footer>
   );
 };
+
+export const Footer = React.memo(FooterComponent);
